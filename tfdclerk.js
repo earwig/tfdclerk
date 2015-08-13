@@ -28,4 +28,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// TODO
+mw.loader.using(["mediawiki.api"], function() {
+    if (mw.config.get("wgNamespaceNumber") != 4 || (
+        mw.config.get("wgTitle") != "Templates for discussion" &&
+        mw.config.get("wgTitle").indexOf("Templates for discussion/Log/2") != 0))
+        return;
+
+    TFDClerk = {
+        // TODO
+    };
+
+    TFDClerk.close = function(head) {
+        // TODO
+        console.log("closing");
+        console.log(head);
+    };
+
+    TFDClerk.relist = function(head) {
+        // TODO
+        console.log("relisting");
+        console.log(head);
+    };
+
+    TFDClerk._build_hook = function(head, name, callback) {
+        return $("<span/>", {style: "margin-left: 1em;"})
+            .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
+            .append($("<a/>", {
+                href: "#",
+                text: name,
+                click: function(h) {
+                    return function() { callback(h); return false; }
+                }(head)
+            }))
+            .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}));
+    };
+
+    TFDClerk.install = function() {
+        $("h4").each(function(i, head) {
+            if ($(head).next().hasClass("tfd-closed"))
+                return;
+
+            $("<span/>", {addClass: "tfdclerk-hooks"})
+                .append(TFDClerk._build_hook(head, "close", TFDClerk.close))
+                .append(TFDClerk._build_hook(head, "relist", TFDClerk.relist))
+                .appendTo($(head).find(".mw-editsection"));
+        });
+    };
+
+    $(TFDClerk.install);
+});
