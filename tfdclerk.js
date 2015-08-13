@@ -36,28 +36,67 @@ mw.loader.using(["mediawiki.api"], function() {
 
     TFDClerk = {
         // TODO
+        sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0
+    };
+
+    TFDClerk._guard = function(head) {
+        if (head.data("guard"))
+            return false;
+        head.data("guard", true);
+        return true;
+    };
+
+    TFDClerk._unguard = function(head) {
+        head.removeData("guard");
+    };
+
+    TFDClerk._remove_option_box = function(box) {
+        var head = box.prev("h4");
+        box.remove();
+        TFDClerk._unguard(head);
+    }
+
+    TFDClerk._add_option_box = function(head, verb) {
+        var box = $("<div/>", { addClass: "tfdclerk-" + verb + "-box" })
+            .css("border", "1px solid #AAA")
+            .css("background-color", "#F5F5F5")
+            .css("margin", "0.5em 0")
+            .css("padding", "1em");
+        box.append(
+            $("<button/>", {
+                text: "Cancel",
+                click: function(b) {
+                    return function() { TFDClerk._remove_option_box(b); };
+                }(box)
+            }))
+            .insertAfter(head);
     };
 
     TFDClerk.close = function(head) {
+        if (!TFDClerk._guard(head))
+            return;
+
+        TFDClerk._add_option_box(head, "close");
         // TODO
-        console.log("closing");
-        console.log(head);
     };
 
     TFDClerk.relist = function(head) {
+        if (!TFDClerk._guard(head))
+            return;
+
+        TFDClerk._add_option_box(head, "relist");
         // TODO
-        console.log("relisting");
-        console.log(head);
     };
 
-    TFDClerk._build_hook = function(head, name, callback) {
+    TFDClerk._build_hook = function(head, verb, callback) {
         return $("<span/>", {style: "margin-left: 1em;"})
             .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
             .append($("<a/>", {
                 href: "#",
-                text: name,
+                text: verb,
+                title: "tfdclerk: " + verb + " discussion",
                 click: function(h) {
-                    return function() { callback(h); return false; }
+                    return function() { callback($(h)); return false; };
                 }(head)
             }))
             .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}));
