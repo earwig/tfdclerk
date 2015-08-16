@@ -73,6 +73,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
         box.append($("<button/>", {
                 text: verb.charAt(0).toUpperCase() + verb.slice(1),
                 addClass: "mw-ui-button mw-ui-progressive",
+                style: "margin-right: 0.5em;",
                 click: function() {
                     callback(head, box);
                 }
@@ -93,12 +94,17 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
             opt.attrs.id = box.prop("id") + "-" + opt.id;
             table.append(
                 $("<tr/>").append(
-                    $("<td/>").append(
+                    $("<td/>", {
+                        style: "padding: 0 0.5em 0.75em 0;"
+                    }).append(
                         $("<label/>", {
                             for: opt.attrs.id,
                             text: opt.label + ":"
                         })))
-                .append($("<td/>").append($(opt.tag, opt.attrs)))
+                .append(
+                    $("<td/>", {
+                        style: "padding-bottom: 0.75em;"
+                    }).append($(opt.tag, opt.attrs)))
             );
         });
         box.append(table);
