@@ -28,15 +28,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-mw.loader.using(["mediawiki.api"], function() {
+mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
     if (mw.config.get("wgNamespaceNumber") != 4 || (
         mw.config.get("wgTitle") != "Templates for discussion" &&
         mw.config.get("wgTitle").indexOf("Templates for discussion/Log/2") != 0))
         return;
 
     TFDClerk = {
-        // TODO
         sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0
+    };
+
+    TFDClerk._get_today = function() {
+        return new Date().toISOString().slice(0, 10);
     };
 
     TFDClerk._guard = function(head) {
@@ -54,38 +57,103 @@ mw.loader.using(["mediawiki.api"], function() {
         var head = box.prev("h4");
         box.remove();
         TFDClerk._unguard(head);
-    }
+    };
 
-    TFDClerk._add_option_box = function(head, verb) {
-        var box = $("<div/>", { addClass: "tfdclerk-" + verb + "-box" })
+    TFDClerk._add_option_box = function(head, verb, title, callback, options) {
+        var box = $("<div/>", {
+            id: "tfdclerk-" + verb + "-box-" + head.uniqueId().prop("id"),
+            addClass: "tfdclerk-" + verb + "-box"
+        })
             .css("border", "1px solid #AAA")
-            .css("background-color", "#F5F5F5")
+            .css("background-color", "#F9F9F9")
             .css("margin", "0.5em 0")
-            .css("padding", "1em");
-        box.append(
-            $("<button/>", {
+            .css("padding", "1em")
+            .append($("<h5/>", {text: title, style: "padding-top: 0;"}));
+        options(box);
+        box.append($("<button/>", {
+                text: verb.charAt(0).toUpperCase() + verb.slice(1),
+                addClass: "mw-ui-button mw-ui-progressive",
+                click: function() {
+                    callback(head, box);
+                }
+            }))
+            .append($("<button/>", {
                 text: "Cancel",
-                click: function(b) {
-                    return function() { TFDClerk._remove_option_box(b); };
-                }(box)
+                addClass: "mw-ui-button",
+                click: function() {
+                    TFDClerk._remove_option_box(box);
+                }
             }))
             .insertAfter(head);
+    };
+
+    TFDClerk._add_option_table = function(box, options) {
+        var table = $("<table/>");
+        $.each(options, function(i, opt) {
+            opt.attrs.id = box.prop("id") + "-" + opt.id;
+            table.append(
+                $("<tr/>").append(
+                    $("<td/>").append(
+                        $("<label/>", {
+                            for: opt.attrs.id,
+                            text: opt.label + ":"
+                        })))
+                .append($("<td/>").append($(opt.tag, opt.attrs)))
+            );
+        });
+        box.append(table);
+    };
+
+    TFDClerk._do_close = function(head, box) {
+        // TODO
+        TFDClerk._remove_option_box(box);
+    };
+
+    TFDClerk._do_relist = function(head, box) {
+        // TODO
+        TFDClerk._remove_option_box(box);
     };
 
     TFDClerk.close = function(head) {
         if (!TFDClerk._guard(head))
             return;
 
-        TFDClerk._add_option_box(head, "close");
-        // TODO
+        TFDClerk._add_option_box(
+            head, "close", "Closing discussion", TFDClerk._do_close,
+            function(box) {
+                // TODO
+            });
     };
 
     TFDClerk.relist = function(head) {
         if (!TFDClerk._guard(head))
             return;
 
-        TFDClerk._add_option_box(head, "relist");
-        // TODO
+        TFDClerk._add_option_box(
+            head, "relist", "Relisting discussion", TFDClerk._do_relist,
+            function(box) {
+                TFDClerk._add_option_table(box, [
+                    {
+                        id: "date",
+                        label: "New date",
+                        tag: "<input/>",
+                        attrs: {
+                            type: "date",
+                            value: TFDClerk._get_today()
+                        }
+                    },
+                    {
+                        id: "comments",
+                        label: "Comments",
+                        tag: "<textarea/>",
+                        attrs: {
+                            rows: 2,
+                            cols: 60,
+                            placeholder: "Optional. Do not sign."
+                        }
+                    }
+                ]);
+            });
     };
 
     TFDClerk._build_hook = function(head, verb, callback) {
@@ -95,9 +163,10 @@ mw.loader.using(["mediawiki.api"], function() {
                 href: "#",
                 text: verb,
                 title: "tfdclerk: " + verb + " discussion",
-                click: function(h) {
-                    return function() { callback($(h)); return false; };
-                }(head)
+                click: function() {
+                    callback($(head));
+                    return false;
+                }
             }))
             .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}));
     };
