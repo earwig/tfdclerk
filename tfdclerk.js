@@ -35,7 +35,8 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
         return;
 
     TFDClerk = {
-        sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0
+        sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0,
+        counter: 1
     };
 
     TFDClerk._get_today = function() {
@@ -61,7 +62,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
 
     TFDClerk._add_option_box = function(head, verb, title, callback, options) {
         var box = $("<div/>", {
-            id: "tfdclerk-" + verb + "-box-" + head.uniqueId().prop("id"),
+            id: "tfdclerk-" + verb + "-box-" + TFDClerk.counter++,
             addClass: "tfdclerk-" + verb + "-box"
         })
             .css("border", "1px solid #AAA")
@@ -69,7 +70,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
             .css("margin", "0.5em 0")
             .css("padding", "1em")
             .append($("<h5/>", {text: title, style: "padding-top: 0;"}));
-        options(box);
+        options(box, box.prop("id") + "-");
         box.append($("<button/>", {
                 text: verb.charAt(0).toUpperCase() + verb.slice(1),
                 addClass: "mw-ui-button mw-ui-progressive",
@@ -91,20 +92,15 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
     TFDClerk._add_option_table = function(box, options) {
         var table = $("<table/>");
         $.each(options, function(i, opt) {
-            opt.attrs.id = box.prop("id") + "-" + opt.id;
-            table.append(
-                $("<tr/>").append(
+            table.append($("<tr/>")
+                .append(
                     $("<td/>", {
                         style: "padding: 0 0.5em 0.75em 0;"
-                    }).append(
-                        $("<label/>", {
-                            for: opt.attrs.id,
-                            text: opt.label + ":"
-                        })))
+                    }).append(opt[0]))
                 .append(
                     $("<td/>", {
                         style: "padding-bottom: 0.75em;"
-                    }).append($(opt.tag, opt.attrs)))
+                    }).append(opt[1]))
             );
         });
         box.append(table);
@@ -126,8 +122,10 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
 
         TFDClerk._add_option_box(
             head, "close", "Closing discussion", TFDClerk._do_close,
-            function(box) {
-                // TODO
+            function(box, prefix) {
+                TFDClerk._add_option_table(box, [
+                    // TODO
+                ]);
             });
     };
 
@@ -137,27 +135,33 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
 
         TFDClerk._add_option_box(
             head, "relist", "Relisting discussion", TFDClerk._do_relist,
-            function(box) {
+            function(box, prefix) {
                 TFDClerk._add_option_table(box, [
-                    {
-                        id: "date",
-                        label: "New date",
-                        tag: "<input/>",
-                        attrs: {
+                    [
+                        $("<label/>", {
+                            for: prefix + "date",
+                            text: "New date:"
+                        }),
+                        $("<input/>", {
+                            id: prefix + "date",
+                            name: "date",
                             type: "date",
                             value: TFDClerk._get_today()
-                        }
-                    },
-                    {
-                        id: "comments",
-                        label: "Comments",
-                        tag: "<textarea/>",
-                        attrs: {
+                        })
+                    ],
+                    [
+                        $("<label/>", {
+                            for: prefix + "comments",
+                            text: "Comments:"
+                        }),
+                        $("<textarea/>", {
+                            id: prefix + "comments",
+                            name: "comments",
                             rows: 2,
                             cols: 60,
                             placeholder: "Optional. Do not sign."
-                        }
-                    }
+                        })
+                    ]
                 ]);
             });
     };
