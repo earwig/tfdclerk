@@ -70,7 +70,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
             .css("margin", "0.5em 0")
             .css("padding", "1em")
             .append($("<h5/>", {text: title, style: "padding-top: 0;"}));
-        options(box, box.prop("id") + "-");
+        options(box, head, box.prop("id") + "-");
         box.append($("<button/>", {
                 text: verb.charAt(0).toUpperCase() + verb.slice(1),
                 addClass: "mw-ui-button mw-ui-progressive",
@@ -116,15 +116,86 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
         TFDClerk._remove_option_box(box);
     };
 
+    TFDClerk._is_merge = function(head) {
+        return head.nextUntil("h4").filter("p").first().find("b")
+            .text() == "Propose merging";
+    };
+
+    TFDClerk._build_close_results = function(box, head, prefix) {
+        if (TFDClerk._is_merge(head))
+            var choices = ["Merge", "Do not merge", "No consensus"];
+        else
+            var choices = ["Delete", "Keep", "Redirect", "No consensus"];
+
+        var elems = $("<div/>");
+
+        $("<label/>").append($("<input/>", {
+                name: "result-speedy",
+                type: "checkbox",
+                value: "true"
+            })).append($("<span/>", {
+                text: "Speedy",
+                style: "margin-right: 1em;"
+            })).appendTo(elems);
+
+        $.each(choices, function(i, choice) {
+            $("<label/>").append($("<input/>", {
+                    name: "result",
+                    type: "radio",
+                    value: choice
+                })).append($("<span/>", {
+                    text: choice,
+                    style: "margin-right: 1em;"
+                })).appendTo(elems);
+        });
+
+        $("<label/>").append($("<input/>", {
+                name: "result",
+                type: "radio",
+                value: "Other"
+            })).append($("<span/>", {
+                text: "Other: "
+            })).append($("<input/>", {
+                name: "result-other",
+                type: "text"
+            })).appendTo(elems);
+
+        return elems;
+    };
+
+    TFDClerk._build_close_actions = function(box, head, prefix) {
+        // TODO
+    };
+
     TFDClerk.close = function(head) {
         if (!TFDClerk._guard(head))
             return;
 
         TFDClerk._add_option_box(
             head, "close", "Closing discussion", TFDClerk._do_close,
-            function(box, prefix) {
+            function(box, head, prefix) {
                 TFDClerk._add_option_table(box, [
-                    // TODO
+                    [
+                        $("<span/>", {text: "Result:"}),
+                        TFDClerk._build_close_results(box, head, prefix)
+                    ],
+                    [
+                        $("<label/>", {
+                            for: prefix + "comments",
+                            text: "Comments:"
+                        }),
+                        $("<textarea/>", {
+                            id: prefix + "comments",
+                            name: "comments",
+                            rows: 2,
+                            cols: 60,
+                            placeholder: "Optional. Do not sign."
+                        })
+                    ],
+                    [
+                        $("<span/>", {text: "Actions:"}),
+                        TFDClerk._build_close_actions(box, head, prefix)
+                    ]
                 ]);
             });
     };
@@ -135,7 +206,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
 
         TFDClerk._add_option_box(
             head, "relist", "Relisting discussion", TFDClerk._do_relist,
-            function(box, prefix) {
+            function(box, head, prefix) {
                 TFDClerk._add_option_table(box, [
                     [
                         $("<label/>", {
