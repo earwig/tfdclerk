@@ -42,7 +42,7 @@ var is_tfd_page = function() {
            mw.config.get("wgNamespaceNumber") == 4 && (
            mw.config.get("wgTitle") == "Templates for discussion" ||
            mw.config.get("wgTitle").indexOf("Templates for discussion/Log/2") == 0);
-}
+};
 
 if (is_tfd_page()) {
     mw.loader.using(dependencies, function() {
@@ -50,36 +50,57 @@ if (is_tfd_page()) {
 /* Main script starts here */
 
 TFDClerk = {
-    api: new mw.Api(),
     sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0,
+    tfds: [],
+    _api: new mw.Api()
     // TODO: access time?
-    _counter: 1,
-    _wikitext_cache: {},
-    _wikitext_cache_extra: {}
 };
 
-TFDClerk._get_today = function() {
-    return new Date().toISOString().slice(0, 10);
+TFD = function(id, head) {
+    this.id = id;
+    this.head = head;
+    this.box = null;
+    // TODO: pending conditions for submit button
+    this._guard = false;
+    this._wikitext = undefined;
+    this._wikitext_callbacks = [];
 };
 
-TFDClerk._guard = function(head) {
-    if (head.data("guard"))
-        return false;
-    head.data("guard", true);
-    return true;
+TFDClerk.api_get = function(tfd, params, done, fail, always) {
+    TFDClerk._api.get(params)
+        .done(function(data) {
+            if (done !== undefined)
+                done.call(tfd, data);
+        })
+        .fail(function(error) {
+            if (done !== undefined)
+                fail.call(tfd, error);
+        })
+        .always(function() {
+            if (always !== undefined)
+                always.call(tfd);
+        });
 };
 
-TFDClerk._unguard = function(head) {
-    head.removeData("guard");
+TFDClerk.install = function() {
+    $("h4").each(function(i, elem) {
+        var head = $(elem);
+        if (head.next().hasClass("tfd-closed"))
+            return;
+        if (head.find(".mw-editsection").length == 0)
+            return;
+
+        var tfd = new TFD(TFDClerk.tfds.length, head);
+        TFDClerk.tfds.push(tfd);
+        tfd.add_hooks();
+    });
 };
 
-TFDClerk._get_section_number = function(head) {
-    var url = head.find(".mw-editsection a").first().prop("href");
-    var match = url.match(/section=(.*?)(\&|$)/);
-    return match ? match[1] : null;
-};
+Date.prototype.toDatePickerFormat = function() {
+    return this.toISOString().slice(0, 10);
+}
 
-TFDClerk._error = function(box, msg, extra) {
+TFD.prototype._error = function(msg, extra) {
     var elem = $("<span/>", {
         text: "Error: " + (extra ? msg + ": " : msg),
         style: "color: #A00;"
@@ -89,62 +110,60 @@ TFDClerk._error = function(box, msg, extra) {
             text: extra,
             style: "font-family: monospace;"
         }));
-    elem.insertAfter(box.find("h5"));
-    box.find(".tfdclerk-submit").prop("disabled", true);
+    elem.insertAfter(this.box.find("h5"));
+    this.box.find(".tfdclerk-submit").prop("disabled", true);
 };
 
-TFDClerk._with_section_content = function(head, box, callback) {
-    var section = TFDClerk._get_section_number(head);
-    if (section === null)
-        return TFDClerk._error(box, "couldn't get section number");
+TFD.prototype._get_section_number = function() {
+    var url = this.head.find(".mw-editsection a").first().prop("href");
+    var match = url.match(/section=(.*?)(\&|$)/);
+    return match ? match[1] : null;
+};
 
-    var cache = TFDClerk._wikitext_cache,
-        extra_cache = TFDClerk._wikitext_cache_extra;
-    if (section in cache) {
-        if (cache[section] === null) {
-            if (section in extra_cache)
-                extra_cache[section].push(callback);
-            else
-                extra_cache[section] = [callback];
-        } else
-            callback(cache[section]);
+TFD.prototype._with_content = function(callback) {
+    var section = this._get_section_number();
+    if (section === null)
+        return this._error("couldn't get section number");
+
+    if (this._wikitext !== undefined) {
+        if (this._wikitext === null)
+            this._wikitext_callbacks.push(callback);
+        else
+            callback.call(this, this._wikitext);
         return;
     }
-    cache[section] = null;
+    this._wikitext = null;
 
-    TFDClerk.api.get({
+    TFDClerk.api_get(this, {
         action: "query",
         prop: "revisions",
         rvprop: "content",
         rvsection: section,
         revids: mw.config.get("wgRevisionId")
-    }).done(function(data) {
+    }, function(data) {
         var pageid = mw.config.get("wgArticleId");
         var content = data.query.pages[pageid].revisions[0]["*"];
-        cache[section] = content;
-        callback(content);
-        if (section in extra_cache) {
-            for (var i in extra_cache[section])
-                extra_cache[section][i](content);
-        }
-    }).fail(function(err) {
-        TFDClerk._error(box, "API query failure", err);
-    }).always(function() {
-        if (section in extra_cache)
-            delete extra_cache[section];
+        this._wikitext = content;
+        callback.call(this, content);
+        for (var i in this._wikitext_callbacks)
+            this._wikitext_callbacks[i].call(this, content);
+    }, function(error) {
+        this._error("API query failure", error);
+    }, function() {
+        this._wikitext_callbacks = [];
     });
 };
 
-TFDClerk._remove_option_box = function(box) {
-    var head = box.prev("h4");
-    box.remove();
-    TFDClerk._unguard(head);
+TFD.prototype._remove_option_box = function() {
+    this.box.remove();
+    this.box = null;
+    this._guard = false;
 };
 
-TFDClerk._add_option_box = function(head, verb, title, callback, options) {
-    var box_id = "tfdclerk-" + verb + "-box-" + TFDClerk._counter++;
-    var box = $("<div/>", {
-        id: box_id,
+TFD.prototype._add_option_box = function(verb, title, callback, options) {
+    var self = this;
+    this.box = $("<div/>", {
+        id: "tfdclerk-" + verb + "-box-" + this.id,
         addClass: "tfdclerk-" + verb + "-box"
     })
         .css("border", "1px solid #AAA")
@@ -156,28 +175,23 @@ TFDClerk._add_option_box = function(head, verb, title, callback, options) {
             text: title,
             style: "margin: 0; padding: 0 0 0.25em 0;"
         }));
-    options(box, head, box_id + "-");
-    box.append($("<button/>", {
-            id: box_id + "-submit",
+
+    options.call(this);
+    this.box.append($("<button/>", {
             text: verb.charAt(0).toUpperCase() + verb.slice(1),
             addClass: "tfdclerk-submit mw-ui-button mw-ui-progressive",
             style: "margin-right: 0.5em;",
-            click: function() {
-                callback(head, box);
-            }
+            click: function() { callback.call(self); }
         }))
         .append($("<button/>", {
-            id: box_id + "-cancel",
             text: "Cancel",
             addClass: "mw-ui-button",
-            click: function() {
-                TFDClerk._remove_option_box(box);
-            }
+            click: function() { self._remove_option_box(); }
         }))
-        .insertAfter(head);
+        .insertAfter(this.head);
 };
 
-TFDClerk._add_option_table = function(box, options) {
+TFD.prototype._add_option_table = function(options) {
     var table = $("<table/>", {style: "border-spacing: 0;"});
     $.each(options, function(i, opt) {
         table.append($("<tr/>")
@@ -191,26 +205,26 @@ TFDClerk._add_option_table = function(box, options) {
                 }).append(opt[1]))
         );
     });
-    box.append(table);
+    this.box.append(table);
 };
 
-TFDClerk._do_close = function(head, box) {
+TFD.prototype._do_close = function() {
     // TODO
-    TFDClerk._remove_option_box(box);
+    this._remove_option_box();
 };
 
-TFDClerk._do_relist = function(head, box) {
+TFD.prototype._do_relist = function() {
     // TODO
-    TFDClerk._remove_option_box(box);
+    this._remove_option_box();
 };
 
-TFDClerk._is_merge = function(head) {
-    return head.nextUntil("h4").filter("p").first().find("b")
+TFD.prototype._is_merge = function() {
+    return this.head.nextUntil("h4").filter("p").first().find("b")
         .text() == "Propose merging";
 };
 
-TFDClerk._build_close_results = function(head) {
-    if (TFDClerk._is_merge(head))
+TFD.prototype._build_close_results = function() {
+    if (this._is_merge())
         var choices = ["Merge", "Do not merge", "No consensus"];
     else
         var choices = ["Delete", "Keep", "Redirect", "No consensus"];
@@ -248,14 +262,14 @@ TFDClerk._build_close_results = function(head) {
     return elems;
 };
 
-TFDClerk._add_close_actions = function(box, head) {
-    TFDClerk._with_section_content(head, box, function(content) {
+TFD.prototype._add_close_actions = function() {
+    this._with_content(function(content) {
         var regex = /\{\{tfd links\|(.*?)(\||\}\})/gi,
             match = regex.exec(content);
         if (match === null)
-            return TFDClerk._error(box, "no templates found in section");
+            return this._error("no templates found in section");
 
-        var actions = box.find(".tfdclerk-actions"),
+        var actions = this.box.find(".tfdclerk-actions"),
             list = $("<ul/>", {style: "margin: 0 0 0 1em;"});
         do {
             var page = "Template:" + match[1];
@@ -270,25 +284,25 @@ TFDClerk._add_close_actions = function(box, head) {
     });
 };
 
-TFDClerk.close = function(head) {
-    if (!TFDClerk._guard(head))
+TFD.prototype.close = function() {
+    if (this._guard)
         return;
+    this._guard = true;
 
-    TFDClerk._add_option_box(
-        head, "close", "Closing discussion", TFDClerk._do_close,
-        function(box, head, prefix) {
-            TFDClerk._add_option_table(box, [
+    this._add_option_box("close", "Closing discussion", this._do_close,
+        function() {
+            this._add_option_table([
                 [
                     $("<span/>", {text: "Result:"}),
-                    TFDClerk._build_close_results(head)
+                    this._build_close_results()
                 ],
                 [
                     $("<label/>", {
-                        for: prefix + "comments",
+                        for: "tfdclerk-comments-" + this.id,
                         text: "Comments:"
                     }),
                     $("<textarea/>", {
-                        id: prefix + "comments",
+                        id: "tfdclerk-comments-" + this.id,
                         name: "comments",
                         rows: 2,
                         cols: 60,
@@ -304,37 +318,37 @@ TFDClerk.close = function(head) {
                         })),
                 ]
             ]);
-            TFDClerk._add_close_actions(box, head);
+            this._add_close_actions();
         });
 };
 
-TFDClerk.relist = function(head) {
-    if (!TFDClerk._guard(head))
+TFD.prototype.relist = function() {
+    if (this._guard)
         return;
+    this._guard = true;
 
-    TFDClerk._add_option_box(
-        head, "relist", "Relisting discussion", TFDClerk._do_relist,
-        function(box, head, prefix) {
-            TFDClerk._add_option_table(box, [
+    this._add_option_box("relist", "Relisting discussion", this._do_relist,
+        function() {
+            this._add_option_table([
                 [
                     $("<label/>", {
-                        for: prefix + "date",
+                        for: "tfdclerk-date-" + this.id,
                         text: "New date:"
                     }),
                     $("<input/>", {
-                        id: prefix + "date",
+                        id: "tfdclerk-date-" + this.id,
                         name: "date",
                         type: "date",
-                        value: TFDClerk._get_today()
+                        value: new Date().toDatePickerFormat()
                     })
                 ],
                 [
                     $("<label/>", {
-                        for: prefix + "comments",
+                        for: "tfdclerk-comments-" + this.id,
                         text: "Comments:"
                     }),
                     $("<textarea/>", {
-                        id: prefix + "comments",
+                        id: "tfdclerk-comments-" + this.id,
                         name: "comments",
                         rows: 2,
                         cols: 60,
@@ -345,7 +359,8 @@ TFDClerk.relist = function(head) {
         });
 };
 
-TFDClerk._build_hook = function(head, verb, callback) {
+TFD.prototype._build_hook = function(verb, callback) {
+    var self = this;
     return $("<span/>", {style: "margin-left: 1em;"})
         .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
         .append($("<a/>", {
@@ -353,23 +368,18 @@ TFDClerk._build_hook = function(head, verb, callback) {
             text: verb,
             title: "tfdclerk: " + verb + " discussion",
             click: function() {
-                callback($(head));
+                callback.call(self);
                 return false;
             }
         }))
         .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}));
 };
 
-TFDClerk.install = function() {
-    $("h4").each(function(i, head) {
-        if ($(head).next().hasClass("tfd-closed"))
-            return;
-
-        $("<span/>", {addClass: "tfdclerk-hooks"})
-            .append(TFDClerk._build_hook(head, "close", TFDClerk.close))
-            .append(TFDClerk._build_hook(head, "relist", TFDClerk.relist))
-            .appendTo($(head).find(".mw-editsection"));
-    });
+TFD.prototype.add_hooks = function() {
+    $("<span/>", {addClass: "tfdclerk-hooks"})
+        .append(this._build_hook("close", this.close))
+        .append(this._build_hook("relist", this.relist))
+        .appendTo(this.head.find(".mw-editsection"));
 };
 
 $(TFDClerk.install);
