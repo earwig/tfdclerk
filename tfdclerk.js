@@ -28,13 +28,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
-    if (mw.config.get("wgNamespaceNumber") != 4 || (
+mw.loader.using(["mediawiki.api", "mediawiki.ui", "jquery.ui.core"], function() {
+    if (mw.config.get("wgAction") != "view" ||
+        mw.config.get("wgIsProbablyEditable") != true ||
+        mw.config.get("wgRevisionId") != mw.config.get("wgCurRevisionId") ||
+        mw.config.get("wgNamespaceNumber") != 4 || (
         mw.config.get("wgTitle") != "Templates for discussion" &&
         mw.config.get("wgTitle").indexOf("Templates for discussion/Log/2") != 0))
         return;
 
     TFDClerk = {
+        api: new mw.Api(),
         sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0,
         counter: 1
     };
@@ -54,6 +58,26 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
         head.removeData("guard");
     };
 
+    TFDClerk._get_section = function(head) {
+        var url = head.find(".mw-editsection a").first().prop("href");
+        var match = url.match(/section=(.*?)(\&|$)/);
+        return match ? match[1] : null;
+    };
+
+    TFDClerk._error = function(box, msg, extra) {
+        var elem = $("<span/>", {
+            text: "Error: " + (extra ? msg + ": " : msg),
+            style: "color: #A00;"
+        });
+        if (extra)
+            elem.append($("<span/>", {
+                text: extra,
+                style: "font-family: monospace;"
+            }));
+        elem.insertAfter(box.find("h5"));
+        $("#" + box.prop("id") + "-submit").prop("disabled", true);
+    };
+
     TFDClerk._remove_option_box = function(box) {
         var head = box.prev("h4");
         box.remove();
@@ -61,17 +85,23 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
     };
 
     TFDClerk._add_option_box = function(head, verb, title, callback, options) {
+        var box_id = "tfdclerk-" + verb + "-box-" + TFDClerk.counter++;
         var box = $("<div/>", {
-            id: "tfdclerk-" + verb + "-box-" + TFDClerk.counter++,
+            id: box_id,
             addClass: "tfdclerk-" + verb + "-box"
         })
             .css("border", "1px solid #AAA")
+            .css("color", "#000")
             .css("background-color", "#F9F9F9")
             .css("margin", "0.5em 0")
             .css("padding", "1em")
-            .append($("<h5/>", {text: title, style: "padding-top: 0;"}));
-        options(box, head, box.prop("id") + "-");
+            .append($("<h5/>", {
+                text: title,
+                style: "margin: 0; padding: 0 0 0.25em 0;"
+            }));
+        options(box, head, box_id + "-");
         box.append($("<button/>", {
+                id: box_id + "-submit",
                 text: verb.charAt(0).toUpperCase() + verb.slice(1),
                 addClass: "mw-ui-button mw-ui-progressive",
                 style: "margin-right: 0.5em;",
@@ -80,6 +110,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
                 }
             }))
             .append($("<button/>", {
+                id: box_id + "-cancel",
                 text: "Cancel",
                 addClass: "mw-ui-button",
                 click: function() {
@@ -90,12 +121,12 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
     };
 
     TFDClerk._add_option_table = function(box, options) {
-        var table = $("<table/>");
+        var table = $("<table/>", {style: "border-spacing: 0;"});
         $.each(options, function(i, opt) {
             table.append($("<tr/>")
                 .append(
                     $("<td/>", {
-                        style: "padding: 0 0.5em 0.75em 0;"
+                        style: "padding-bottom: 0.75em; padding-right: 0.5em;"
                     }).append(opt[0]))
                 .append(
                     $("<td/>", {
@@ -121,23 +152,21 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
             .text() == "Propose merging";
     };
 
-    TFDClerk._build_close_results = function(box, head, prefix) {
+    TFDClerk._build_close_results = function(head) {
         if (TFDClerk._is_merge(head))
             var choices = ["Merge", "Do not merge", "No consensus"];
         else
             var choices = ["Delete", "Keep", "Redirect", "No consensus"];
 
         var elems = $("<div/>");
-
         $("<label/>").append($("<input/>", {
                 name: "result-speedy",
                 type: "checkbox",
                 value: "true"
             })).append($("<span/>", {
                 text: "Speedy",
-                style: "margin-right: 1em;"
+                style: "margin: 0 1.25em 0 0.25em;"
             })).appendTo(elems);
-
         $.each(choices, function(i, choice) {
             $("<label/>").append($("<input/>", {
                     name: "result",
@@ -145,26 +174,40 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
                     value: choice
                 })).append($("<span/>", {
                     text: choice,
-                    style: "margin-right: 1em;"
+                    style: "margin: 0 1.25em 0 0.25em;"
                 })).appendTo(elems);
         });
-
         $("<label/>").append($("<input/>", {
                 name: "result",
                 type: "radio",
                 value: "Other"
             })).append($("<span/>", {
-                text: "Other: "
+                text: "Other: ",
+                style: "margin: 0 0.25em;"
             })).append($("<input/>", {
                 name: "result-other",
                 type: "text"
             })).appendTo(elems);
-
         return elems;
     };
 
-    TFDClerk._build_close_actions = function(box, head, prefix) {
-        // TODO
+    TFDClerk._add_close_actions = function(box, head, prefix) {  // prefix?
+        var section = TFDClerk._get_section(head);
+        if (section === null)
+            return TFDClerk._error(box, "couldn't get section number");
+
+        TFDClerk.api.get({
+            action: "query",
+            prop: "revisions",
+            rvprop: "content",
+            rvsection: section,
+            revids: mw.config.get("wgRevisionId")
+        }).done(function(data) {
+            // TODO
+            console.log(data);
+        }).fail(function(err) {
+            TFDClerk._error(box, "API query failure", err);
+        });
     };
 
     TFDClerk.close = function(head) {
@@ -177,7 +220,7 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
                 TFDClerk._add_option_table(box, [
                     [
                         $("<span/>", {text: "Result:"}),
-                        TFDClerk._build_close_results(box, head, prefix)
+                        TFDClerk._build_close_results(head)
                     ],
                     [
                         $("<label/>", {
@@ -194,9 +237,14 @@ mw.loader.using(["mediawiki.ui", "jquery.ui.core"], function() {
                     ],
                     [
                         $("<span/>", {text: "Actions:"}),
-                        TFDClerk._build_close_actions(box, head, prefix)
+                        $("<div/>", {id: prefix + "actions"}).append(
+                            $("<span/>", {
+                                text: "Fetching...",
+                                style: "font-style: italic; color: #777;"
+                            })),
                     ]
                 ]);
+                TFDClerk._add_close_actions(box, head, prefix);
             });
     };
 
