@@ -110,6 +110,7 @@ TFD.prototype._error = function(msg, extra) {
             text: extra,
             style: "font-family: monospace;"
         }));
+    // TODO: more - advise refreshing, reporting persistent errors
     elem.insertAfter(this.box.find("h5"));
     this.box.find(".tfdclerk-submit").prop("disabled", true);
 };
