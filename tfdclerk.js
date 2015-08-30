@@ -1,5 +1,6 @@
 // Templates for discussion clerk script by [[User:The Earwig]]
 
+// Version: @TFDCLERK_VERSION@
 // Development and bug reports: https://github.com/earwig/tfdclerk
 
 // To install, add:
