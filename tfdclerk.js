@@ -119,7 +119,6 @@ TFD.prototype._unblock_submit = function(reason) {
 };
 
 TFD.prototype._error = function(msg, extra) {
-    // TODO: expand: advise refreshing, reporting persistent errors
     var elem = $("<span/>", {
         text: "Error: " + (extra ? msg + ": " : msg),
         style: "color: #A00;"
@@ -128,6 +127,23 @@ TFD.prototype._error = function(msg, extra) {
         elem.append($("<span/>", {
             text: extra,
             style: "font-family: monospace;"
+        }));
+
+    var contact = $("<a/>", {
+        href: "https://en.wikipedia.org/wiki/User_talk:The_Earwig",
+        title: "User talk:The Earwig",
+        text: "contact me"
+    }), file_bug = $("<a/>", {
+        href: "https://github.com/earwig/tfdclerk",
+        title: "earwig/tfdclerk",
+        text: "file a bug report"
+    });
+    elem.append($("<br/>"))
+        .append($("<small/>", {
+            html: "This may be caused by an edit conflict or other " +
+            "intermittent problem. Try refreshing the page. If the error " +
+            "persists, you can " + contact.prop("outerHTML") + " or " +
+            file_bug.prop("outerHTML") + "."
         }));
     elem.insertAfter(this.box.find("h5"));
     this._block_submit("error");
@@ -177,6 +193,7 @@ TFD.prototype._remove_option_box = function() {
     this.box.remove();
     this.box = null;
     this._guard = false;
+    this._submit_blockers = [];
 };
 
 TFD.prototype._add_option_box = function(verb, title, callback, options) {
@@ -201,11 +218,15 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
             addClass: "tfdclerk-submit mw-ui-button mw-ui-progressive",
             style: "margin-right: 0.5em;",
             disabled: this._submit_blockers.length > 0,
-            click: function() { callback.call(self); }
+            click: function() {
+                self._block_submit("submitting");
+                self.box.find(".tfdclerk-cancel").prop("disabled", true);
+                callback.call(self);
+            }
         }))
         .append($("<button/>", {
             text: "Cancel",
-            addClass: "mw-ui-button",
+            addClass: "tfdclerk-cancel mw-ui-button",
             click: function() { self._remove_option_box(); }
         }))
         .insertAfter(this.head);
@@ -230,12 +251,36 @@ TFD.prototype._add_option_table = function(options) {
 
 TFD.prototype._do_close = function() {
     // TODO
-    this._remove_option_box();
+    // rough mockup:
+    // - post-submit ui updates
+    //      - result options -> result string
+    //      - disable comments box
+    //      - collapse/disable/fix actions
+    //      - add progress info area
+    // - "Closing discussion..."
+    //      - add discussion close tags with result and comment, optional nac
+    //      - " done ([[diff]])"
+    // - interface for closing each template
+    // - replace gray buttons with progressive refresh button
 };
 
 TFD.prototype._do_relist = function() {
     // TODO
-    this._remove_option_box();
+    // rough mockup:
+    // - post-submit ui updates
+    //      - date input box -> link to new discussion log page
+    //      - disable comments box
+    //      - add progress info area
+    // - "Adding discussion to new date..."
+    //      - add discussion to new date, plus relist template
+    //      - " done ([[diff]])"
+    // - "Removing discussion from old date..."
+    //      - replace contents of section with {{relisted}}
+    //      - " done ([[diff]])"
+    // - "Updating discussion link on template(s):\n* [[Template:A]]..."
+    //      - update |link param of {{template for discussion}}
+    //      - " done ([[diff]])"
+    // - replace gray buttons with progressive refresh button
 };
 
 TFD.prototype._is_merge = function() {
