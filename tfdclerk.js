@@ -200,6 +200,7 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
             text: verb.charAt(0).toUpperCase() + verb.slice(1),
             addClass: "tfdclerk-submit mw-ui-button mw-ui-progressive",
             style: "margin-right: 0.5em;",
+            disabled: this._submit_blockers.length > 0,
             click: function() { callback.call(self); }
         }))
         .append($("<button/>", {
@@ -282,14 +283,14 @@ TFD.prototype._build_close_results = function() {
 };
 
 TFD.prototype._add_close_actions = function() {
+    this._block_submit("add-close-actions");
     this._with_content(function(content) {
         var regex = /\{\{tfd links\|(.*?)(\||\}\})/gi,
             match = regex.exec(content);
         if (match === null)
             return this._error("no templates found in section");
 
-        var actions = this.box.find(".tfdclerk-actions"),
-            list = $("<ul/>", {style: "margin: 0 0 0 1em;"});
+        var list = $("<ul/>", {style: "margin: 0 0 0 1em;"});
         do {
             var page = "Template:" + match[1];
             $("<li/>").append($("<a/>", {
@@ -298,8 +299,9 @@ TFD.prototype._add_close_actions = function() {
                 text: page
             })).appendTo(list);
         } while ((match = regex.exec(content)) !== null);
-        actions.empty();
-        actions.append(list);
+
+        this.box.find(".tfdclerk-actions").empty().append(list);
+        this._unblock_submit("add-close-actions");
     });
 };
 
