@@ -61,8 +61,9 @@ TFD = function(id, head) {
     this.id = id;
     this.head = head;
     this.box = null;
-    // TODO: pending conditions for submit button
+
     this._guard = false;
+    this._submit_blockers = [];
     this._wikitext = undefined;
     this._wikitext_callbacks = [];
 };
@@ -101,7 +102,24 @@ Date.prototype.toDatePickerFormat = function() {
     return this.toISOString().slice(0, 10);
 }
 
+TFD.prototype._block_submit = function(reason) {
+    if (this._submit_blockers.indexOf(reason) < 0)
+        this._submit_blockers.push(reason);
+
+    this.box.find(".tfdclerk-submit").prop("disabled", true);
+};
+
+TFD.prototype._unblock_submit = function(reason) {
+    var index = this._submit_blockers.indexOf(reason);
+    if (index >= 0)
+        this._submit_blockers.splice(index, 1);
+
+    if (this._submit_blockers.length == 0)
+        this.box.find(".tfdclerk-submit").prop("disabled", false);
+};
+
 TFD.prototype._error = function(msg, extra) {
+    // TODO: expand: advise refreshing, reporting persistent errors
     var elem = $("<span/>", {
         text: "Error: " + (extra ? msg + ": " : msg),
         style: "color: #A00;"
@@ -111,9 +129,8 @@ TFD.prototype._error = function(msg, extra) {
             text: extra,
             style: "font-family: monospace;"
         }));
-    // TODO: more - advise refreshing, reporting persistent errors
     elem.insertAfter(this.box.find("h5"));
-    this.box.find(".tfdclerk-submit").prop("disabled", true);
+    this._block_submit("error");
 };
 
 TFD.prototype._get_section_number = function() {
@@ -286,6 +303,26 @@ TFD.prototype._add_close_actions = function() {
     });
 };
 
+TFD.prototype._get_relist_date = function() {
+    var months = [
+        "January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December"];
+
+    var date = new Date($("#tfdclerk-date-" + this.id).val());
+    var month = months[date.getUTCMonth()];
+    return date.getUTCFullYear() + " " + month + " " + date.getUTCDate();
+};
+
+TFD.prototype._on_date_change = function() {
+    var date = this._get_relist_date();
+    var this_date = mw.config.get("wgTitle").split("/Log/")[1];
+
+    if (date == null || date == this_date)
+        this._block_submit("bad-date");
+    else
+        this._unblock_submit("bad-date");
+};
+
 TFD.prototype.close = function() {
     if (this._guard)
         return;
@@ -325,6 +362,7 @@ TFD.prototype.close = function() {
 };
 
 TFD.prototype.relist = function() {
+    var self = this;
     if (this._guard)
         return;
     this._guard = true;
@@ -341,7 +379,8 @@ TFD.prototype.relist = function() {
                         id: "tfdclerk-date-" + this.id,
                         name: "date",
                         type: "date",
-                        value: new Date().toDatePickerFormat()
+                        value: new Date().toDatePickerFormat(),
+                        change: function() { self._on_date_change(); }
                     })
                 ],
                 [
