@@ -46,7 +46,7 @@ SCRIPT_SITE = "https://en.wikipedia.org"
 SCRIPT_USER = "The Earwig"
 SCRIPT_FILE = "tfdclerk.js"
 COOKIE_FILE = ".cookies"
-VERSION_TAG = "@TFDCLERK_VERSION@"
+REPLACE_TAG = "@TFDCLERK_{tag}@"
 EDIT_SUMMARY = "Updating script with latest version. ({version})"
 
 SCRIPT_PAGE = "User:{user}/{file}".format(user=SCRIPT_USER, file=SCRIPT_FILE)
@@ -61,12 +61,17 @@ def _is_clean():
 
 def _get_version():
     """
+    Return the current script version as a hex ID.
+    """
+    return REPO.commit().hexsha[:10]
+
+def _get_full_version():
+    """
     Return the current script version as a human-readable string.
     """
-    commit = REPO.commit()
-    date = time.gmtime(commit.committed_date)
+    date = time.gmtime(REPO.commit().committed_date)
     datefmt = time.strftime("%H:%M, %-d %B %Y (UTC)", date)
-    return "{hash} ({date})".format(hash=commit.hexsha[:10], date=datefmt)
+    return "{hash} ({date})".format(hash=_get_version(), date=datefmt)
 
 def _get_script():
     """
@@ -75,7 +80,14 @@ def _get_script():
     with open(path.join(SCRIPT_ROOT, SCRIPT_FILE), "r") as fp:
         text = fp.read().decode("utf8")
 
-    return text.replace(VERSION_TAG, _get_version())
+    replacements = {
+        "VERSION": _get_version(),
+        "VERSION_FULL": _get_full_version()
+    }
+
+    for tag, value in replacements.iteritems():
+        text = text.replace(REPLACE_TAG.format(tag=tag), value)
+    return text
 
 def _get_cookiejar():
     """
@@ -123,7 +135,7 @@ def main():
     script = _get_script()
     site = _get_site()
     page = site.get_page(SCRIPT_PAGE)
-    summary = EDIT_SUMMARY.format(version=REPO.commit().hexsha[:10])
+    summary = EDIT_SUMMARY.format(version=_get_version())
 
     page.edit(script, summary, minor=False, bot=False)
     print("Done!")

@@ -1,6 +1,6 @@
 // Templates for discussion clerk script by [[User:The Earwig]]
 
-// Version: @TFDCLERK_VERSION@
+// Version: @TFDCLERK_VERSION_FULL@
 // Development and bug reports: https://github.com/earwig/tfdclerk
 
 // To install, add:
@@ -51,9 +51,13 @@ if (is_tfd_page()) {
 /* Main script starts here */
 
 TFDClerk = {
-    sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0,
+    script_url: "https://en.wikipedia.org/wiki/User:The_Earwig/tfdclerk.js",
+    author_url: "https://en.wikipedia.org/wiki/User_talk:The_Earwig",
+    github_url: "https://github.com/earwig/tfdclerk",
     tfds: [],
-    _api: new mw.Api()
+
+    _api: new mw.Api(),
+    _sysop: $.inArray("sysop", mw.config.get("wgUserGroups")) >= 0
     // TODO: access time?
 };
 
@@ -130,12 +134,12 @@ TFD.prototype._error = function(msg, extra) {
         }));
 
     var contact = $("<a/>", {
-        href: "https://en.wikipedia.org/wiki/User_talk:The_Earwig",
-        title: "User talk:The Earwig",
+        href: TFDClerk.author_url,
+        title: TFDClerk.author_url.split("/").pop().replace(/_/g, " "),
         text: "contact me"
     }), file_bug = $("<a/>", {
-        href: "https://github.com/earwig/tfdclerk",
-        title: "earwig/tfdclerk",
+        href: TFDClerk.github_url,
+        title: TFDClerk.github_url.split("/").splice(-2).join("/"),
         text: "file a bug report"
     });
     elem.append($("<br/>"))
@@ -202,11 +206,24 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
         id: "tfdclerk-" + verb + "-box-" + this.id,
         addClass: "tfdclerk-" + verb + "-box"
     })
+        .css("position", "relative")
         .css("border", "1px solid #AAA")
         .css("color", "#000")
         .css("background-color", "#F9F9F9")
         .css("margin", "0.5em 0")
         .css("padding", "1em")
+        .append($("<div/>")
+            .css("position", "absolute")
+            .css("right", "1em")
+            .css("top", "0.5em")
+            .css("font-size", "75%")
+            .css("color", "#777")
+            .append($("<a/>", {
+                href: TFDClerk.script_url,
+                title: "tfdclerk.js",
+                text: "tfdclerk.js"
+            }))
+            .append($("<span/>", {text: " version @TFDCLERK_VERSION@"})))
         .append($("<h5/>", {
             text: title,
             style: "margin: 0; padding: 0 0 0.25em 0;"
