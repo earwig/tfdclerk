@@ -49,7 +49,7 @@ SCRIPT_USER = "The Earwig"
 SCRIPT_FILE = "tfdclerk.js"
 COOKIE_FILE = ".cookies"
 REPLACE_TAG = "@TFDCLERK_{tag}@"
-EDIT_SUMMARY = "Updating script with latest version. ({version})"
+EDIT_SUMMARY = "Updating script with latest version ({version})"
 
 SCRIPT_PAGE = "User:{user}/{file}".format(user=SCRIPT_USER, file=SCRIPT_FILE)
 SCRIPT_ROOT = path.dirname(path.abspath(__file__))

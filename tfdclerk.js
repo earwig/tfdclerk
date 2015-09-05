@@ -51,6 +51,7 @@ if (is_tfd_page()) {
 /* Main script starts here */
 
 TFDClerk = {
+    version: "@TFDCLERK_VERSION@",
     script_url: "https://en.wikipedia.org/wiki/User:The_Earwig/tfdclerk.js",
     author_url: "https://en.wikipedia.org/wiki/User_talk:The_Earwig",
     github_url: "https://github.com/earwig/tfdclerk",
@@ -124,7 +125,7 @@ TFD.prototype._unblock_submit = function(reason) {
 
 TFD.prototype._error = function(msg, extra) {
     var elem = $("<span/>", {
-        text: "Error: " + (extra ? msg + ": " : msg),
+        html: "<strong>Error:</strong> " + (extra ? msg + ": " : msg),
         style: "color: #A00;"
     });
     if (extra)
@@ -153,6 +154,12 @@ TFD.prototype._error = function(msg, extra) {
     this._block_submit("error");
 };
 
+TFD.prototype._get_discussion_page = function() {
+    var url = this.head.find(".mw-editsection a").first().prop("href");
+    var match = url.match(/title=(.*?)(\&|$)/);
+    return match ? match[1] : null;
+};
+
 TFD.prototype._get_section_number = function() {
     var url = this.head.find(".mw-editsection a").first().prop("href");
     var match = url.match(/section=(.*?)(\&|$)/);
@@ -160,9 +167,10 @@ TFD.prototype._get_section_number = function() {
 };
 
 TFD.prototype._with_content = function(callback) {
-    var section = this._get_section_number();
-    if (section === null)
-        return this._error("couldn't get section number");
+    var title = this._get_discussion_page(),
+        section = this._get_section_number();
+    if (title === null || section === null)
+        return this._error("couldn't find discussion section");
 
     if (this._wikitext !== undefined) {
         if (this._wikitext === null)
@@ -177,10 +185,11 @@ TFD.prototype._with_content = function(callback) {
         action: "query",
         prop: "revisions",
         rvprop: "content",
+        indexpageids: "",
         rvsection: section,
-        revids: mw.config.get("wgRevisionId")
+        titles: title
     }, function(data) {
-        var pageid = mw.config.get("wgArticleId");
+        var pageid = data.query.pageids[0];
         var content = data.query.pages[pageid].revisions[0]["*"];
         this._wikitext = content;
         callback.call(this, content);
@@ -223,7 +232,7 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
                 title: "tfdclerk.js",
                 text: "tfdclerk.js"
             }))
-            .append($("<span/>", {text: " version @TFDCLERK_VERSION@"})))
+            .append($("<span/>", {text: " version " + TFDClerk.version})))
         .append($("<h5/>", {
             text: title,
             style: "margin: 0; padding: 0 0 0.25em 0;"
@@ -347,7 +356,7 @@ TFD.prototype._build_close_results = function() {
 TFD.prototype._add_close_actions = function() {
     this._block_submit("add-close-actions");
     this._with_content(function(content) {
-        var regex = /\{\{tfd links\|(.*?)(\||\}\})/gi,
+        var regex = /\*\s*\{\{tfd links\|(.*?)(\||\}\})/gi,
             match = regex.exec(content);
         if (match === null)
             return this._error("no templates found in section");
