@@ -37,12 +37,14 @@ import errno
 from getpass import getpass
 from os import chmod, path
 import stat
+from sys import argv
 import time
+from urllib import urlencode
 
 import earwigbot
 import git
 
-SCRIPT_SITE = "https://en.wikipedia.org"
+SCRIPT_SITE = "en.wikipedia.org"
 SCRIPT_USER = "The Earwig"
 SCRIPT_FILE = "tfdclerk.js"
 COOKIE_FILE = ".cookies"
@@ -52,6 +54,9 @@ EDIT_SUMMARY = "Updating script with latest version. ({version})"
 SCRIPT_PAGE = "User:{user}/{file}".format(user=SCRIPT_USER, file=SCRIPT_FILE)
 SCRIPT_ROOT = path.dirname(path.abspath(__file__))
 REPO = git.Repo(SCRIPT_ROOT)
+
+if len(argv) > 1 and argv[1].lstrip("-").startswith("t"):
+    SCRIPT_SITE = "test.wikipedia.org"
 
 def _is_clean():
     """
@@ -113,8 +118,9 @@ def _get_site():
     This is hacky, but it allows us to upload the script without storing the
     user's password in a config file like EarwigBot normally does.
     """
-    site = earwigbot.wiki.Site(base_url=SCRIPT_SITE, script_path="/w",
-                               cookiejar=_get_cookiejar(), assert_edit="user")
+    site = earwigbot.wiki.Site(
+        base_url="https://" + SCRIPT_SITE, script_path="/w",
+        cookiejar=_get_cookiejar(), assert_edit="user")
 
     logged_in_as = site._get_username_from_cookies()
     if not logged_in_as or logged_in_as != SCRIPT_USER:
@@ -131,14 +137,22 @@ def main():
         print("Uncommitted changes in working directory. Stopping.")
         exit(1)
 
-    print("Uploading script to [[{page}]]...".format(page=SCRIPT_PAGE))
+    print("Uploading script to [[{page}]] on {site}...".format(
+        page=SCRIPT_PAGE, site=SCRIPT_SITE))
     script = _get_script()
     site = _get_site()
     page = site.get_page(SCRIPT_PAGE)
     summary = EDIT_SUMMARY.format(version=_get_version())
 
     page.edit(script, summary, minor=False, bot=False)
+
+    params = {
+        "title": page.title.replace(" ", "_"),
+        "oldid": "prev",
+        "diff": "cur"
+    }
     print("Done!")
+    print(site.url + "/w/index.php?" + urlencode(params))
 
 if __name__ == "__main__":
     main()
