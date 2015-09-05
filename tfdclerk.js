@@ -275,6 +275,13 @@ TFD.prototype._add_option_table = function(options) {
     this.box.append(table);
 };
 
+TFD.prototype._build_loading_node = function(node, text) {
+    return $("<" + node + "/>", {
+        text: text + "...",
+        style: "font-style: italic; color: #777;"
+    });
+};
+
 TFD.prototype._do_close = function() {
     // TODO
     // rough mockup:
@@ -333,7 +340,7 @@ TFD.prototype._build_close_results = function() {
         $("<label/>").append($("<input/>", {
                 name: "result",
                 type: "radio",
-                value: choice
+                value: choice.toLowerCase()
             })).append($("<span/>", {
                 text: choice,
                 style: "margin: 0 1.25em 0 0.25em;"
@@ -342,7 +349,7 @@ TFD.prototype._build_close_results = function() {
     $("<label/>").append($("<input/>", {
             name: "result",
             type: "radio",
-            value: "Other"
+            value: "other"
         })).append($("<span/>", {
             text: "Other: ",
             style: "margin: 0 0.25em;"
@@ -351,6 +358,55 @@ TFD.prototype._build_close_results = function() {
             type: "text"
         })).appendTo(elems);
     return elems;
+};
+
+TFD.prototype._on_backlink_summary = function(tlinfo, ntrans, nmlinks) {
+    tlinfo.empty().append($("<li/>").append($("<a/>", {
+            href: "/foobar",  // TODO: actual URL here
+            title: "Transclusions of " + page,
+            text: ntrans + " transclusions"
+        })));
+
+    if (nmlinks > 0)
+        tlinfo.append($("<li/>").append($("<a/>", {
+            href: "/foobar",  // TODO: actual URL here
+            title: "Mainspace links to " + page,
+            text: nmlinks + " mainspace links"
+        })));
+};
+
+TFD.prototype._build_close_action_entry = function(page) {
+    var link_id = mw.util.wikiUrlencode(page)
+        .replace(/%/g, "\\.").replace(/:/g, "\\:");
+    var redlink = $("#" + link_id).children().first().hasClass("new");
+
+    var tlinfo = $("<ul/>", {style: "display: inline;"})
+        .append(this._build_loading_node("li", "Fetching transclusions"));
+    // TODO: callback to fetch backlink data and call _on_backlink_summary
+    this._block_submit("fetching-backlinks-" + page);
+
+    return $("<li/>").append($("<a/>", {
+        href: mw.util.getUrl(page),
+        title: page,
+        text: page,
+        addClass: redlink ? "new" : "",
+        style: "font-weight: bold;"
+    })).append($("<span/>", {text: ": "}))
+        .append($("<select/>", {disabled: redlink})  // TODO: fully implement
+            .append($("<option/>", {
+                value: "none",
+                text: "Do nothing",
+                selected: true
+            }))
+            .append($("<option/>", {
+                value: "holding-cell",
+                text: "Move to holding cell"
+            })))
+        // TODO: action-specific additional options here
+        .append($("<span/>", {text: " (?) ("}))  // TODO: action help here
+        .append($("<div/>", {addClass: "hlist", style: "display: inline;"})
+            .append(tlinfo))
+        .append($("<span/>", {text: ")"}));
 };
 
 TFD.prototype._add_close_actions = function() {
@@ -364,11 +420,7 @@ TFD.prototype._add_close_actions = function() {
         var list = $("<ul/>", {style: "margin: 0 0 0 1em;"});
         do {
             var page = "Template:" + match[1];
-            $("<li/>").append($("<a/>", {
-                href: mw.util.getUrl(page),
-                title: page,
-                text: page
-            })).appendTo(list);
+            this._build_close_action_entry(page).appendTo(list);
         } while ((match = regex.exec(content)) !== null);
 
         this.box.find(".tfdclerk-actions").empty().append(list);
@@ -423,11 +475,8 @@ TFD.prototype.close = function() {
                 ],
                 [
                     $("<span/>", {text: "Actions:"}),
-                    $("<div/>", {addClass: "tfdclerk-actions"}).append(
-                        $("<span/>", {
-                            text: "Fetching...",
-                            style: "font-style: italic; color: #777;"
-                        })),
+                    $("<div/>", {addClass: "tfdclerk-actions"})
+                        .append(this._build_loading_node("span", "Fetching")),
                 ]
             ]);
             this._add_close_actions();
