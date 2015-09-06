@@ -107,6 +107,18 @@ Date.prototype.toDatePickerFormat = function() {
     return this.toISOString().slice(0, 10);
 }
 
+Date.prototype.toLogDateFormat = function() {
+    if (isNaN(this.valueOf()))
+        return null;
+
+    var months = [
+        "January", "February", "March", "April", "May", "June", "July",
+        "August", "September", "October", "November", "December"];
+
+    var month = months[this.getUTCMonth()];
+    return this.getUTCFullYear() + " " + month + " " + this.getUTCDate();
+}
+
 TFD.prototype._block_submit = function(reason) {
     if (this._submit_blockers.indexOf(reason) < 0)
         this._submit_blockers.push(reason);
@@ -428,23 +440,51 @@ TFD.prototype._add_close_actions = function() {
 };
 
 TFD.prototype._get_relist_date = function() {
-    var months = [
-        "January", "February", "March", "April", "May", "June", "July",
-        "August", "September", "October", "November", "December"];
-
-    var date = new Date($("#tfdclerk-date-" + this.id).val());
-    var month = months[date.getUTCMonth()];
-    return date.getUTCFullYear() + " " + month + " " + date.getUTCDate();
+    return new Date(this.box.find(".tfdclerk-date").val()).toLogDateFormat();
 };
 
 TFD.prototype._on_date_change = function() {
     var date = this._get_relist_date();
-    var this_date = mw.config.get("wgTitle").split("/Log/")[1];
+    var title = "Wikipedia:Templates for discussion/Log/" + date;
+    var info = this.box.find(".tfdclerk-discussion-info");
+    info.empty();
 
-    if (date == null || date == this_date)
-        this._block_submit("bad-date");
+    if (mw.config.get("wgTitle") == "Templates for discussion")
+        var this_date = this.head.prevAll().filter("h3").first().find("a")
+            .prop("title").split("/Log/")[1];
     else
-        this._unblock_submit("bad-date");
+        var this_date = mw.config.get("wgTitle").split("/Log/")[1];
+
+    if (date == null || date == this_date) {
+        this._block_submit("bad-date");
+        info.append($("<span/>", {
+            text: date == this_date ? "Same as current date" : "Invalid date",
+            style: "color: #A00;"
+        }));
+        return;
+    }
+
+    this._unblock_submit("bad-date");
+    this._block_submit("checking-discussion");
+    info.append(this._build_loading_node("span", "Checking discussion"));
+
+    TFDClerk.api_get(this, {
+        action: "query",
+        indexpageids: "",
+        titles: title
+    }, function(data) {
+        this._unblock_submit("checking-discussion");
+        info.empty().append($("<span/>", {text: "Log: "})).append($("<a/>", {
+            href: mw.util.getUrl(title),
+            title: title,
+            text: date,
+            addClass: data.query.pageids[0] < 0 ? "new" : ""
+        }));
+        if (date == (new Date().toLogDateFormat()))
+            info.append($("<span/>", {text: " (today)"}));
+    }, function(error) {
+        this._error("API query failure", error);
+    });
 };
 
 TFD.prototype.close = function() {
@@ -498,11 +538,15 @@ TFD.prototype.relist = function() {
                     }),
                     $("<input/>", {
                         id: "tfdclerk-date-" + this.id,
+                        addClass: "tfdclerk-date",
                         name: "date",
                         type: "date",
                         value: new Date().toDatePickerFormat(),
                         change: function() { self._on_date_change(); }
-                    })
+                    }).add($("<span/>", {
+                        addClass: "tfdclerk-discussion-info",
+                        style: "margin-left: 0.5em; vertical-align: middle;"
+                    }))
                 ],
                 [
                     $("<label/>", {
@@ -518,6 +562,7 @@ TFD.prototype.relist = function() {
                     })
                 ]
             ]);
+            this._on_date_change();
         });
 };
 
