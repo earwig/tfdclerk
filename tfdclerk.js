@@ -390,7 +390,7 @@ TFD.prototype._build_close_results = function() {
     });
 
     var other = elems.children().last();
-    other.find("span").css("margin", "0 0.25em");
+    other.find("span").text("Other:").css("margin", "0 0.25em");
     other.append($("<input/>", {
         name: "result-other",
         type: "text"
