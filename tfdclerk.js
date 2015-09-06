@@ -29,6 +29,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// <nowiki>
+
 var dependencies = [
     "mediawiki.api",
     "mediawiki.ui",
@@ -333,6 +335,26 @@ TFD.prototype._is_merge = function() {
         .text() == "Propose merging";
 };
 
+TFD.prototype._get_close_action_choices = function() {
+    // TODO
+    return [{
+        id: "none",
+        name: "Do nothing",
+        help: "The script will not modify this template or pages related to " +
+              "it. You will need to carry out the closure yourself.",
+        on_select: null,
+        on_close: null,
+        default: true
+    }, {
+        id: "holding-cell",
+        name: "Move to holding cell",
+        help: "The script will add {{being deleted}} to the template and " +
+              "add an entry to the holding cell ([[WP:TFD/H]]).",
+        on_select: null,
+        on_close: null
+    }];
+};
+
 TFD.prototype._on_close_result_change = function() {
     this._unblock_submit("no-close-result");
     // TODO: possibly disable/enable individual close actions
@@ -457,6 +479,7 @@ TFD.prototype._load_backlink_summary = function(page, tlinfo) {
 };
 
 TFD.prototype._build_close_action_entry = function(page) {
+    var self = this;
     var redlink = this.head.nextUntil("h4").filter("ul").first()
         .find("a").filter(function() { return $(this).text() == page; })
         .hasClass("new");
@@ -465,6 +488,32 @@ TFD.prototype._build_close_action_entry = function(page) {
         .append(this._build_loading_node("li", "Fetching transclusions"));
     this._load_backlink_summary(page, tlinfo);
 
+    var select_extra = $("<span/>");
+    var help = $("<abbr/>", {text: "?"});
+    var select = $("<select/>", {
+        disabled: redlink,
+        change: function() {
+            var option = select.find("option:selected");
+            help.prop("title", option.data("help"));
+            if (option.data("select"))
+                option.data("select").call(self, select_extra);
+        }
+    });
+
+    $.each(this._get_close_action_choices(), function(i, choice) {
+        select.append($("<option/>", {
+            value: choice.id,
+            text: choice.name,
+            selected: choice.default
+        }).data({
+            help: choice.help,
+            select: choice.on_select,
+            close: choice.on_close
+        }));
+        if (choice.default)
+            help.prop("title", choice.help);
+    });
+
     return $("<li/>").append($("<a/>", {
         href: mw.util.getUrl(page),
         title: page,
@@ -472,18 +521,11 @@ TFD.prototype._build_close_action_entry = function(page) {
         addClass: redlink ? "new" : "",
         style: "font-weight: bold;"
     })).append($("<span/>", {text: ": "}))
-        .append($("<select/>", {disabled: redlink})  // TODO: fully implement
-            .append($("<option/>", {
-                value: "none",
-                text: "Do nothing",
-                selected: true
-            }))
-            .append($("<option/>", {
-                value: "holding-cell",
-                text: "Move to holding cell"
-            })))
-        // TODO: action-specific additional options here
-        .append($("<span/>", {text: " (?) ("}))  // TODO: action help here
+        .append(select)
+        .append(select_extra)
+        .append($("<span/>", {text: " ("}))
+        .append(help)
+        .append($("<span/>", {text: ") ("}))
         .append($("<div/>", {addClass: "hlist", style: "display: inline;"})
             .append(tlinfo))
         .append($("<span/>", {text: ")"}));
@@ -662,3 +704,5 @@ $(TFDClerk.install);
 
     });
 }
+
+// </nowiki>
