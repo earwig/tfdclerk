@@ -375,16 +375,39 @@ TFD.prototype._build_close_results = function() {
     return elems;
 };
 
-TFD.prototype._on_backlink_summary = function(page, tlinfo, ntrans, nlinks) {
+TFD.prototype._on_backlink_summary = function(page, tlinfo, ntrans, nmtrans,
+                                              nlinks) {
     tlinfo.empty().append($("<li/>").append($("<a/>", {
-            href: "/foobar",  // TODO: actual URL here
+            href: mw.util.getUrl("Special:WhatLinksHere/" + page, {
+                namespace: "",
+                hidelinks: 1,
+                hideredirs: 1,
+                hidetrans: 0
+            }),
             title: "Transclusions of " + page,
             text: ntrans + " transclusions"
         })));
 
+    if (ntrans != 0)
+        tlinfo.append($("<li/>").append($("<a/>", {
+            href: mw.util.getUrl("Special:WhatLinksHere/" + page, {
+                namespace: 0,
+                hidelinks: 1,
+                hideredirs: 1,
+                hidetrans: 0
+            }),
+            title: "Mainspace transclusions of " + page,
+            text: nmtrans + " in mainspace"
+        })));
+
     if (nlinks != 0)
         tlinfo.append($("<li/>").append($("<a/>", {
-            href: "/foobar",  // TODO: actual URL here
+            href: mw.util.getUrl("Special:WhatLinksHere/" + page, {
+                namespace: "",
+                hidelinks: 0,
+                hideredirs: 0,
+                hidetrans: 1
+            }),
             title: "Mainspace links to " + page,
             text: nlinks + " mainspace links"
         })));
@@ -402,26 +425,31 @@ TFD.prototype._load_backlink_summary = function(page, tlinfo) {
         bllimit: limit,
         blredirect: ""
     }, function(data) {
-        if (data["continue"] && data["continue"].eicontinue)
-            var ntrans = limit + "+";
-        else
-            var ntrans = data.query.embeddedin.length;
+        var ntrans = data.query.embeddedin.length;
+        var nmtrans = data.query.embeddedin.filter(function(pg) {
+            return pg.ns == 0;
+        }).length;
+        var nlinks = data.query.backlinks.reduce(function(acc, pg) {
+            var c = 0;
+            if (pg.ns == 0)
+                c++;
+            if (pg.redirlinks)
+                c += pg.redirlinks.filter(function(rl) {
+                    return rl.ns == 0;
+                }).length;
+            return acc + c;
+        }, 0);
 
-        if (data["continue"] && data["continue"].blcontinue)
-            var nlinks = limit + "+";
-        else
-            var nlinks = data.query.backlinks.reduce(function(acc, pg) {
-                var c = 0;
-                if (pg.ns == 0)
-                    c++;
-                if (pg.redirlinks)
-                    c += pg.redirlinks.filter(function(rl) {
-                        return rl.ns == 0;
-                    }).length;
-                return acc + c;
-            }, 0);
+        if (data["continue"]) {
+            if (data["continue"].eicontinue) {
+                ntrans += "+";
+                nmtrans += "+";
+            }
+            if (data["continue"].blcontinue)
+                nlinks += "+";
+        }
 
-        this._on_backlink_summary(page, tlinfo, ntrans, nlinks);
+        this._on_backlink_summary(page, tlinfo, ntrans, nmtrans, nlinks);
     });
 }
 
