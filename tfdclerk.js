@@ -76,15 +76,17 @@ TFD = function(id, head) {
 TFDClerk.api_get = function(tfd, params, done, fail, always) {
     TFDClerk._api.get(params)
         .done(function(data) {
-            if (done !== undefined)
+            if (done)
                 done.call(tfd, data);
         })
         .fail(function(error) {
-            if (done !== undefined)
+            if (fail)
                 fail.call(tfd, error);
+            else
+                tfd._error("API query failure", error);
         })
         .always(function() {
-            if (always !== undefined)
+            if (always)
                 always.call(tfd);
         });
 };
@@ -207,9 +209,7 @@ TFD.prototype._with_content = function(callback) {
         callback.call(this, content);
         for (var i in this._wikitext_callbacks)
             this._wikitext_callbacks[i].call(this, content);
-    }, function(error) {
-        this._error("API query failure", error);
-    }, function() {
+    }, null, function() {
         this._wikitext_callbacks = [];
     });
 };
@@ -339,6 +339,9 @@ TFD.prototype._build_close_results = function() {
     else
         var choices = ["Delete", "Keep", "Redirect", "No consensus"];
 
+    // TODO: block submit until one is selected; possibly disable individual
+    // action options based on what is picked
+
     var elems = $("<div/>");
     $("<label/>").append($("<input/>", {
             name: "result-speedy",
@@ -372,20 +375,55 @@ TFD.prototype._build_close_results = function() {
     return elems;
 };
 
-TFD.prototype._on_backlink_summary = function(tlinfo, ntrans, nmlinks) {
+TFD.prototype._on_backlink_summary = function(page, tlinfo, ntrans, nlinks) {
     tlinfo.empty().append($("<li/>").append($("<a/>", {
             href: "/foobar",  // TODO: actual URL here
             title: "Transclusions of " + page,
             text: ntrans + " transclusions"
         })));
 
-    if (nmlinks > 0)
+    if (nlinks != 0)
         tlinfo.append($("<li/>").append($("<a/>", {
             href: "/foobar",  // TODO: actual URL here
             title: "Mainspace links to " + page,
-            text: nmlinks + " mainspace links"
+            text: nlinks + " mainspace links"
         })));
 };
+
+TFD.prototype._load_backlink_summary = function(page, tlinfo) {
+    var limit = TFDClerk._sysop ? 5000 : 500;
+    TFDClerk.api_get(this, {
+        action: "query",
+        list: "embeddedin|backlinks",
+        eititle: page,
+        eilimit: limit,
+        bltitle: page,
+        blnamespace: "0|10",
+        bllimit: limit,
+        blredirect: ""
+    }, function(data) {
+        if (data["continue"] && data["continue"].eicontinue)
+            var ntrans = limit + "+";
+        else
+            var ntrans = data.query.embeddedin.length;
+
+        if (data["continue"] && data["continue"].blcontinue)
+            var nlinks = limit + "+";
+        else
+            var nlinks = data.query.backlinks.reduce(function(acc, pg) {
+                var c = 0;
+                if (pg.ns == 0)
+                    c++;
+                if (pg.redirlinks)
+                    c += pg.redirlinks.filter(function(rl) {
+                        return rl.ns == 0;
+                    }).length;
+                return acc + c;
+            }, 0);
+
+        this._on_backlink_summary(page, tlinfo, ntrans, nlinks);
+    });
+}
 
 TFD.prototype._build_close_action_entry = function(page) {
     var redlink = this.head.nextUntil("h4").filter("ul").first()
@@ -394,7 +432,7 @@ TFD.prototype._build_close_action_entry = function(page) {
 
     var tlinfo = $("<ul/>", {style: "display: inline;"})
         .append(this._build_loading_node("li", "Fetching transclusions"));
-    // TODO: callback to fetch backlink data and call _on_backlink_summary
+    this._load_backlink_summary(page, tlinfo);
 
     return $("<li/>").append($("<a/>", {
         href: mw.util.getUrl(page),
@@ -482,8 +520,6 @@ TFD.prototype._on_date_change = function() {
         }));
         if (date == (new Date().toLogDateFormat()))
             info.append($("<span/>", {text: " (today)"}));
-    }, function(error) {
-        this._error("API query failure", error);
     });
 };
 
