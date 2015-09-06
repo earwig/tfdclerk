@@ -333,15 +333,18 @@ TFD.prototype._is_merge = function() {
         .text() == "Propose merging";
 };
 
+TFD.prototype._on_close_result_change = function() {
+    this._unblock_submit("no-close-result");
+    // TODO: possibly disable/enable individual close actions
+};
+
 TFD.prototype._build_close_results = function() {
     if (this._is_merge())
-        var choices = ["Merge", "Do not merge", "No consensus"];
+        var choices = ["Merge", "Do not merge", "No consensus", "Other"];
     else
-        var choices = ["Delete", "Keep", "Redirect", "No consensus"];
+        var choices = ["Delete", "Keep", "Redirect", "No consensus", "Other"];
 
-    // TODO: block submit until one is selected; possibly disable individual
-    // action options based on what is picked
-
+    var self = this;
     var elems = $("<div/>");
     $("<label/>").append($("<input/>", {
             name: "result-speedy",
@@ -351,27 +354,27 @@ TFD.prototype._build_close_results = function() {
             text: "Speedy",
             style: "margin: 0 1.25em 0 0.25em;"
         })).appendTo(elems);
+
     $.each(choices, function(i, choice) {
         $("<label/>").append($("<input/>", {
                 name: "result",
                 type: "radio",
-                value: choice.toLowerCase()
+                value: choice.toLowerCase(),
+                change: function() { self._on_close_result_change(); }
             })).append($("<span/>", {
                 text: choice,
                 style: "margin: 0 1.25em 0 0.25em;"
             })).appendTo(elems);
     });
-    $("<label/>").append($("<input/>", {
-            name: "result",
-            type: "radio",
-            value: "other"
-        })).append($("<span/>", {
-            text: "Other: ",
-            style: "margin: 0 0.25em;"
-        })).append($("<input/>", {
-            name: "result-other",
-            type: "text"
-        })).appendTo(elems);
+
+    var other = elems.children().last();
+    other.find("span").css("margin", "0 0.25em");
+    other.append($("<input/>", {
+        name: "result-other",
+        type: "text"
+    }));
+
+    this._block_submit("no-close-result");
     return elems;
 };
 
@@ -451,7 +454,7 @@ TFD.prototype._load_backlink_summary = function(page, tlinfo) {
 
         this._on_backlink_summary(page, tlinfo, ntrans, nmtrans, nlinks);
     });
-}
+};
 
 TFD.prototype._build_close_action_entry = function(page) {
     var redlink = this.head.nextUntil("h4").filter("ul").first()
