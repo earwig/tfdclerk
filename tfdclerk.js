@@ -376,14 +376,13 @@ TFD.prototype._on_backlink_summary = function(tlinfo, ntrans, nmlinks) {
 };
 
 TFD.prototype._build_close_action_entry = function(page) {
-    var link_id = mw.util.wikiUrlencode(page)
-        .replace(/%/g, "\\.").replace(/:/g, "\\:");
-    var redlink = $("#" + link_id).children().first().hasClass("new");
+    var redlink = this.head.nextUntil("h4").filter("ul").first()
+        .find("a").filter(function() { return $(this).text() == page; })
+        .hasClass("new");
 
     var tlinfo = $("<ul/>", {style: "display: inline;"})
         .append(this._build_loading_node("li", "Fetching transclusions"));
     // TODO: callback to fetch backlink data and call _on_backlink_summary
-    this._block_submit("fetching-backlinks-" + page);
 
     return $("<li/>").append($("<a/>", {
         href: mw.util.getUrl(page),
