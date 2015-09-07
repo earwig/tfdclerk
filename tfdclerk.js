@@ -50,7 +50,7 @@ var is_tfd_page = function() {
 if (is_tfd_page()) {
     mw.loader.using(dependencies, function() {
 
-    /* Main script starts here */
+/* Main script starts here */
 
 @TFDCLERK_INCLUDE:main.js@
 @TFDCLERK_INCLUDE:util.js@
@@ -58,9 +58,9 @@ if (is_tfd_page()) {
 @TFDCLERK_INCLUDE:tfd_close.js@
 @TFDCLERK_INCLUDE:tfd_relist.js@
 
-    $(TFDClerk.install);
+$(TFDClerk.install);
 
-    /* Main script ends here */
+/* Main script ends here */
 
     });
 }

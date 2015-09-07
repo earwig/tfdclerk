@@ -51,6 +51,7 @@ TFD.prototype._unblock_submit = function(reason) {
 
 TFD.prototype._error = function(msg, extra) {
     var elem = $("<span/>", {
+        addClass: "tfdclerk-error",
         html: "<strong>Error:</strong> " + (extra ? msg + ": " : msg),
         style: "color: #A00;"
     });
@@ -76,6 +77,9 @@ TFD.prototype._error = function(msg, extra) {
             "persists, you can " + contact.prop("outerHTML") + " or " +
             file_bug.prop("outerHTML") + "."
         }));
+
+    if (this.box.find(".tfdclerk-error"))
+        this.box.find(".tfdclerk-error").remove();
     elem.insertAfter(this.box.find("h5"));
     this._block_submit("error");
 };
