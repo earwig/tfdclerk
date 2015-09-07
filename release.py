@@ -37,6 +37,7 @@ import errno
 from getpass import getpass
 from os import chmod, path
 import stat
+import re
 from sys import argv
 import time
 from urllib import urlencode
@@ -45,8 +46,10 @@ import earwigbot
 import git
 
 SCRIPT_SITE = "en.wikipedia.org"
+SCRIPT_TEST = "test.wikipedia.org"
 SCRIPT_USER = "The Earwig"
 SCRIPT_FILE = "tfdclerk.js"
+SCRIPT_SDIR = "src"
 COOKIE_FILE = ".cookies"
 REPLACE_TAG = "@TFDCLERK_{tag}@"
 EDIT_SUMMARY = "Updating script with latest version ({version})"
@@ -54,9 +57,6 @@ EDIT_SUMMARY = "Updating script with latest version ({version})"
 SCRIPT_PAGE = "User:{user}/{file}".format(user=SCRIPT_USER, file=SCRIPT_FILE)
 SCRIPT_ROOT = path.dirname(path.abspath(__file__))
 REPO = git.Repo(SCRIPT_ROOT)
-
-if len(argv) > 1 and argv[1].lstrip("-").startswith("t"):
-    SCRIPT_SITE = "test.wikipedia.org"
 
 def _is_clean():
     """
@@ -78,12 +78,39 @@ def _get_full_version():
     datefmt = time.strftime("%H:%M, %-d %B %Y (UTC)", date)
     return "{hash} ({date})".format(hash=_get_version(), date=datefmt)
 
+def _do_include(text, include):
+    """
+    Replace an include directive inside the script with a source file.
+    """
+    with open(path.join(SCRIPT_ROOT, SCRIPT_SDIR, include), "r") as fp:
+        source = fp.read().decode("utf8")
+
+    hs_tag = REPLACE_TAG.format(tag="HEADER_START")
+    he_tag = REPLACE_TAG.format(tag="HEADER_END")
+    if hs_tag in source and he_tag in source:
+        lines = source.splitlines()
+        head_start = [i for i, line in enumerate(lines) if hs_tag in line][0]
+        head_end = [i for i, line in enumerate(lines) if he_tag in line][0]
+        del lines[head_start:head_end + 1]
+        source = "\n".join(lines)
+
+    tag = REPLACE_TAG.format(tag="INCLUDE:" + include)
+    if text[:text.index(tag)][-2:] == "\n\n" and source.startswith("\n"):
+        source = source[1:]  # Remove extra newline
+
+    return text.replace(tag, source)
+
 def _get_script():
     """
     Return the complete script.
     """
     with open(path.join(SCRIPT_ROOT, SCRIPT_FILE), "r") as fp:
         text = fp.read().decode("utf8")
+
+    re_include = REPLACE_TAG.format(tag=r"INCLUDE:(.*?)")
+    includes = re.findall(re_include, text)
+    for include in includes:
+        text = _do_include(text, include)
 
     replacements = {
         "VERSION": _get_version(),
@@ -111,7 +138,7 @@ def _get_cookiejar():
 
     return cookiejar
 
-def _get_site():
+def _get_site(site_url=SCRIPT_SITE):
     """
     Return the EarwigBot Site object where the script will be saved.
 
@@ -119,7 +146,7 @@ def _get_site():
     user's password in a config file like EarwigBot normally does.
     """
     site = earwigbot.wiki.Site(
-        base_url="https://" + SCRIPT_SITE, script_path="/w",
+        base_url="https://" + site_url, script_path="/w",
         cookiejar=_get_cookiejar(), assert_edit="user")
 
     logged_in_as = site._get_username_from_cookies()
@@ -133,14 +160,23 @@ def main():
     """
     Main entry point for script.
     """
+    if len(argv) > 1 and argv[1].lstrip("-").startswith("c"):
+        print(_get_script(), end="")
+        return
+
     if not _is_clean():
         print("Uncommitted changes in working directory. Stopping.")
         exit(1)
 
+    if len(argv) > 1 and argv[1].lstrip("-").startswith("t"):
+        site_url = SCRIPT_TEST
+    else:
+        site_url = SCRIPT_SITE
+
     print("Uploading script to [[{page}]] on {site}...".format(
-        page=SCRIPT_PAGE, site=SCRIPT_SITE))
+        page=SCRIPT_PAGE, site=site_url))
     script = _get_script()
-    site = _get_site()
+    site = _get_site(site_url)
     page = site.get_page(SCRIPT_PAGE)
     summary = EDIT_SUMMARY.format(version=_get_version())
 
