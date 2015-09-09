@@ -1,4 +1,4 @@
-This is a English Wikipedia
+This is an English Wikipedia
 [user script](https://en.wikipedia.org/wiki/Wikipedia:User_scripts) to automate
 common
 [templates for discussion](https://en.wikipedia.org/wiki/Wikipedia:Templates_for_discussion)
