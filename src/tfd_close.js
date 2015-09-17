@@ -43,7 +43,8 @@ TFD.prototype._is_merge = function() {
 };
 
 TFD.prototype._get_close_action_choices = function() {
-    // TODO
+    // TODO: disable action options until transcluion info loads...
+    // TODO: restrictions for close reason
     return [{
         id: "none",
         name: "Do nothing",
@@ -51,14 +52,65 @@ TFD.prototype._get_close_action_choices = function() {
               "it. You will need to carry out the closure yourself.",
         on_select: null,
         on_close: null,
+        restrict: {},
         default: true
     }, {
         id: "holding-cell",
         name: "Move to holding cell",
         help: "The script will add {{being deleted}} to the template and " +
               "add an entry to the holding cell ([[WP:TFD/H]]).",
+        on_select: null,  // TODO: auto-select "to merge" if merging
+        on_close: null,
+        restrict: {}
+    }, {
+        id: "keep",
+        name: "Keep", // TODO: clarify? esp. for merges
+        help: "TODO",
+        // remove {{TFD}}/{{TFM}}, add/update {{TFD end}} on talk with result
         on_select: null,
-        on_close: null
+        on_close: null,
+        restrict: {}
+    }, {
+        id: "redirect",
+        name: "Redirect", // TODO: clarify?
+        help: "TODO",
+        // redirect main and subpages and double-redirects to user-selected
+        // target; add {{TFD end}} on talk [or give option to redirect talk
+        // instead?]; "Ensure page protection for the redirect matches that of
+        // the template which the page now redirects to, and that page
+        // protection for the target template is appropriate for the number of
+        // transclusions which may have increased after the redirection.")
+        on_select: null,
+        on_close: null,
+        restrict: {merge: false}  // TODO: allow for merges?
+    }, {
+        id: "review-and-delete",
+        name: "Review and delete",
+        help: "TODO",
+        on_select: null,
+        on_close: null,
+        restrict: {merge: false, used: true}
+    }, {
+        id: "orphan-and-delete",
+        name: "Orphan and delete",
+        help: "TODO",
+        on_select: null,
+        on_close: null,
+        restrict: {merge: false, used: true}
+    }, {
+        id: "substitute-and-delete",
+        name: "Substitute and delete",
+        help: "TODO",
+        on_select: null,
+        on_close: null,
+        restrict: {merge: false, used: true}
+    }, {
+        id: "delete",
+        name: "Delete",
+        help: "TODO",
+        on_select: null,
+        on_close: null,
+        restrict: {merge: false, used: false}
     }];
 };
 
