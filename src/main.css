@@ -29,7 +29,7 @@ SOFTWARE.
 }
 
 .tfdclerk-hook-divider {
-    display: inline;
+    display: inline !important;
 }
 
 .tfdclerk-error {

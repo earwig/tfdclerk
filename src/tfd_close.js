@@ -277,7 +277,7 @@ TFD.prototype._build_close_action_entry = function(page) {
         href: mw.util.getUrl(page),
         title: page,
         text: page,
-        addClass: "tfdclerk-action-page" + (redlink ? "new" : "")
+        addClass: "tfdclerk-action-page" + (redlink ? " new" : "")
     })).append($("<span/>", {text: ": "}))
         .append(select)
         .append(select_extra)
