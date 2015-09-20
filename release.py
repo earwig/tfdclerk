@@ -98,6 +98,13 @@ def _do_include(text, include):
     if text[:text.index(tag)][-2:] == "\n\n" and source.startswith("\n"):
         source = source[1:]  # Remove extra newline
 
+    if include.endswith(".css"):
+        lines = ['"' + line.ljust(75) + '" +'
+                 for line in source.strip().splitlines()]
+        if lines and lines[-1]:
+            lines[-1] = lines[-1][:-2]  # Strip off last +
+        source = "\n".join(lines)
+
     return text.replace(tag, source)
 
 def _get_script():

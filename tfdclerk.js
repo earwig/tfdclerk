@@ -52,6 +52,10 @@ if (is_tfd_page()) {
 
 /* Main script starts here */
 
+mw.util.addCSS(
+@TFDCLERK_INCLUDE:main.css@
+);
+
 @TFDCLERK_INCLUDE:main.js@
 @TFDCLERK_INCLUDE:util.js@
 @TFDCLERK_INCLUDE:tfd.js@
