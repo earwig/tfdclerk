@@ -232,7 +232,7 @@ TFD.prototype._build_hook_divider = function() {
     return $("<span/>", {
         addClass: "mw-editsection-divider",
         style: "display: inline;",
-        text: "["
+        text: " | "
     });
 };
 
