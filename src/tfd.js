@@ -52,13 +52,12 @@ TFD.prototype._unblock_submit = function(reason) {
 TFD.prototype._error = function(msg, extra) {
     var elem = $("<span/>", {
         addClass: "tfdclerk-error",
-        html: "<strong>Error:</strong> " + (extra ? msg + ": " : msg),
-        style: "color: #A00;"
+        html: "<strong>Error:</strong> " + (extra ? msg + ": " : msg)
     });
     if (extra)
         elem.append($("<span/>", {
-            text: extra,
-            style: "font-family: monospace;"
+            addClass: "tfdclerk-error-extra",
+            text: extra
         }));
 
     var contact = $("<a/>", {
@@ -146,20 +145,9 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
     var self = this;
     this.box = $("<div/>", {
         id: "tfdclerk-" + verb + "-box-" + this.id,
-        addClass: "tfdclerk-" + verb + "-box"
+        addClass: "tfdclerk-box tfdclerk-" + verb + "-box"
     })
-        .css("position", "relative")
-        .css("border", "1px solid #AAA")
-        .css("color", "#000")
-        .css("background-color", "#F9F9F9")
-        .css("margin", "0.5em 0")
-        .css("padding", "1em")
-        .append($("<div/>")
-            .css("position", "absolute")
-            .css("right", "1em")
-            .css("top", "0.5em")
-            .css("font-size", "75%")
-            .css("color", "#777")
+        .append($("<div/>", {addClass: "tfdclerk-box-info"})
             .append($("<a/>", {
                 href: TFDClerk.script_url,
                 title: "tfdclerk.js",
@@ -167,15 +155,14 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
             }))
             .append($("<span/>", {text: " version " + TFDClerk.version})))
         .append($("<h5/>", {
-            text: title,
-            style: "margin: 0; padding: 0 0 0.25em 0;"
+            addClass: "tfdclerk-box-heading",
+            text: title
         }));
 
     options.call(this);
     this.box.append($("<button/>", {
             text: verb.charAt(0).toUpperCase() + verb.slice(1),
             addClass: "tfdclerk-submit mw-ui-button mw-ui-progressive",
-            style: "margin-right: 0.5em;",
             disabled: this._submit_blockers.length > 0,
             click: function() {
                 self._block_submit("submitting");
@@ -192,17 +179,13 @@ TFD.prototype._add_option_box = function(verb, title, callback, options) {
 };
 
 TFD.prototype._add_option_table = function(options) {
-    var table = $("<table/>", {style: "border-spacing: 0;"});
+    var table = $("<table/>", {addClass: "tfdclerk-options"});
     $.each(options, function(i, opt) {
         table.append($("<tr/>")
             .append(
-                $("<td/>", {
-                    style: "padding-bottom: 0.75em; padding-right: 0.5em;"
-                }).append(opt[0]))
+                $("<td/>", {addClass: "tfdclerk-option-name"}).append(opt[0]))
             .append(
-                $("<td/>", {
-                    style: "padding-bottom: 0.75em;"
-                }).append(opt[1]))
+                $("<td/>", {addClass: "tfdclerk-option-value"}).append(opt[1]))
         );
     });
     this.box.append(table);
@@ -210,8 +193,8 @@ TFD.prototype._add_option_table = function(options) {
 
 TFD.prototype._build_loading_node = function(node, text) {
     return $("<" + node + "/>", {
-        text: text + "...",
-        style: "font-style: italic; color: #777;"
+        addClass: "tfdclerk-loading",
+        text: text + "..."
     });
 };
 
@@ -230,14 +213,13 @@ TFD.prototype._build_hook = function(verb, callback) {
 
 TFD.prototype._build_hook_divider = function() {
     return $("<span/>", {
-        addClass: "mw-editsection-divider",
-        style: "display: inline;",
+        addClass: "tfdclerk-hook-divider mw-editsection-divider",
         text: " | "
     });
 };
 
 TFD.prototype.add_hooks = function() {
-    $("<span/>", {addClass: "tfdclerk-hooks", style: "margin-left: 1em;"})
+    $("<span/>", {addClass: "tfdclerk-hooks"})
         .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
         .append(this._build_hook("close", this.close))
         .append(this._build_hook_divider())

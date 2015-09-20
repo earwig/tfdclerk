@@ -60,8 +60,8 @@ TFD.prototype._on_date_change = function() {
     if (date == null || date == this_date) {
         this._block_submit("bad-date");
         info.append($("<span/>", {
-            text: date == this_date ? "Same as current date" : "Invalid date",
-            style: "color: #A00;"
+            addClass: "tfdclerk-bad-date",
+            text: date == this_date ? "Same as current date" : "Invalid date"
         }));
         return;
     }
@@ -109,8 +109,7 @@ TFD.prototype.relist = function() {
                         value: new Date().toDatePickerFormat(),
                         change: function() { self._on_date_change(); }
                     }).add($("<span/>", {
-                        addClass: "tfdclerk-discussion-info",
-                        style: "margin-left: 0.5em; vertical-align: middle;"
+                        addClass: "tfdclerk-discussion-info"
                     }))
                 ],
                 [

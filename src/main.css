@@ -21,3 +21,102 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 @TFDCLERK_HEADER_END@ */
+
+/* General */
+
+.tfdclerk-hooks {
+    margin-left: 1em;
+}
+
+.tfdclerk-hook-divider {
+    display: inline;
+}
+
+.tfdclerk-error {
+    color: #A00;
+}
+
+.tfdclerk-error-extra {
+    font-family: monospace;
+}
+
+.tfdclerk-box {
+    position: relative;
+    margin: 0.5em 0;
+    padding: 1em;
+    border: 1px solid #AAA;
+    color: #000;
+    background-color: #F9F9F9;
+}
+
+.tfdclerk-box-info {
+    position: absolute;
+    right: 1em;
+    top: 0.5em;
+    font-size: 75%;
+    color: #777;
+}
+
+.tfdclerk-box-heading {
+    margin: 0;
+    padding: 0 0 0.25em 0;
+}
+
+.tfdclerk-submit {
+    margin-right: 0.5em;
+}
+
+.tfdclerk-options {
+    border-spacing: 0;
+}
+
+.tfdclerk-option-name {
+    padding-bottom: 0.75em;
+    padding-right: 0.5em;
+}
+
+.tfdclerk-option-value {
+    padding-bottom: 0.75em;
+}
+
+.tfdclerk-loading {
+    font-style: italic;
+    color: #777;
+}
+
+/* Relisting */
+
+.tfdclerk-discussion-info {
+    vertical-align: middle;
+    margin-left: 0.5em;
+}
+
+.tfdclerk-bad-date {
+    color: #A00;
+}
+
+/* Closing */
+
+.tfdclerk-result-option {
+    margin: 0 1.25em 0 0.25em;
+}
+
+.tfdclerk-result-other {
+    margin: 0 0.25em;
+}
+
+.tfdclerk-close-actions {
+    margin: 0 0 0 1em;
+}
+
+.tfdclerk-action-page {
+    font-weight: bold;
+}
+
+.tfdclerk-backlink-sum-list {
+    display: inline;
+}
+
+.tfdclerk-backlink-sum-div {
+    display: inline;
+}

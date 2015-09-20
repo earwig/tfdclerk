@@ -44,7 +44,7 @@ TFD.prototype._is_merge = function() {
 
 TFD.prototype._get_close_action_choices = function() {
     // TODO: disable action options until transcluion info loads...
-    // TODO: restrictions for close reason
+    // TODO: restrictions for close result
     return [{
         id: "none",
         name: "Do nothing",
@@ -132,8 +132,8 @@ TFD.prototype._build_close_results = function() {
             type: "checkbox",
             value: "true"
         })).append($("<span/>", {
-            text: "Speedy",
-            style: "margin: 0 1.25em 0 0.25em;"
+            addClass: "tfdclerk-result-option",
+            text: "Speedy"
         })).appendTo(elems);
 
     $.each(choices, function(i, choice) {
@@ -143,13 +143,13 @@ TFD.prototype._build_close_results = function() {
                 value: choice.toLowerCase(),
                 change: function() { self._on_close_result_change(); }
             })).append($("<span/>", {
-                text: choice,
-                style: "margin: 0 1.25em 0 0.25em;"
+                addClass: "tfdclerk-result-option",
+                text: choice
             })).appendTo(elems);
     });
 
     var other = elems.children().last();
-    other.find("span").text("Other:").css("margin", "0 0.25em");
+    other.find("span").addClass("tfdclerk-result-other").text("Other:");
     other.append($("<input/>", {
         name: "result-other",
         type: "text"
@@ -243,7 +243,7 @@ TFD.prototype._build_close_action_entry = function(page) {
         .find("a").filter(function() { return $(this).text() == page; })
         .hasClass("new");
 
-    var tlinfo = $("<ul/>", {style: "display: inline;"})
+    var tlinfo = $("<ul/>", {addClass: "tfdclerk-backlink-sum-list"})
         .append(this._build_loading_node("li", "Fetching transclusions"));
     this._load_backlink_summary(page, tlinfo);
 
@@ -277,15 +277,14 @@ TFD.prototype._build_close_action_entry = function(page) {
         href: mw.util.getUrl(page),
         title: page,
         text: page,
-        addClass: redlink ? "new" : "",
-        style: "font-weight: bold;"
+        addClass: "tfdclerk-action-page" + (redlink ? "new" : "")
     })).append($("<span/>", {text: ": "}))
         .append(select)
         .append(select_extra)
         .append($("<span/>", {text: " ("}))
         .append(help)
         .append($("<span/>", {text: ") ("}))
-        .append($("<div/>", {addClass: "hlist", style: "display: inline;"})
+        .append($("<div/>", {addClass: "tfdclerk-backlink-sum-div hlist"})
             .append(tlinfo))
         .append($("<span/>", {text: ")"}));
 };
@@ -298,7 +297,7 @@ TFD.prototype._add_close_actions = function() {
         if (match === null)
             return this._error("no templates found in section");
 
-        var list = $("<ul/>", {style: "margin: 0 0 0 1em;"});
+        var list = $("<ul/>", {addClass: "tfdclerk-close-actions"});
         do {
             var page = "Template:" + match[1];
             this._build_close_action_entry(page).appendTo(list);
