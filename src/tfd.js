@@ -84,14 +84,19 @@ TFD.prototype._error = function(msg, extra) {
     this._block_submit("error");
 };
 
+TFD.prototype._get_section_edit_tag = function() {
+    return this.head
+        .find(".mw-editsection a:not(.mw-editsection-visualeditor)").first();
+};
+
 TFD.prototype._get_discussion_page = function() {
-    var url = this.head.find(".mw-editsection a").first().prop("href");
+    var url = this._get_section_edit_tag().prop("href");
     var match = url.match(/title=(.*?)(\&|$)/);
     return match ? match[1] : null;
 };
 
 TFD.prototype._get_section_number = function() {
-    var url = this.head.find(".mw-editsection a").first().prop("href");
+    var url = this._get_section_edit_tag().prop("href");
     var match = url.match(/section=(.*?)(\&|$)/);
     return match ? match[1] : null;
 };
