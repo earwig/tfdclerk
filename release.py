@@ -99,7 +99,7 @@ def _do_include(text, include):
         source = source[1:]  # Remove extra newline
 
     if include.endswith(".css"):
-        lines = ['"' + line.ljust(75) + '" +'
+        lines = [('"' + line + '\\n"').ljust(78) + '+'
                  for line in source.strip().splitlines()]
         if lines and lines[-1]:
             lines[-1] = lines[-1][:-2]  # Strip off last +
