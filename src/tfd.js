@@ -217,23 +217,31 @@ TFD.prototype._build_loading_node = function(node, text) {
 
 TFD.prototype._build_hook = function(verb, callback) {
     var self = this;
-    return $("<span/>", {style: "margin-left: 1em;"})
-        .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
-        .append($("<a/>", {
-            href: "#",
-            text: verb,
-            title: "tfdclerk: " + verb + " discussion",
-            click: function() {
-                callback.call(self);
-                return false;
-            }
-        }))
-        .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}));
+    return $("<a/>", {
+        href: "#",
+        text: verb,
+        title: "tfdclerk: " + verb + " discussion",
+        click: function() {
+            callback.call(self);
+            return false;
+        }
+    });
+};
+
+TFD.prototype._build_hook_divider = function() {
+    return $("<span/>", {
+        addClass: "mw-editsection-divider",
+        style: "display: inline;",
+        text: "["
+    });
 };
 
 TFD.prototype.add_hooks = function() {
-    $("<span/>", {addClass: "tfdclerk-hooks"})
+    $("<span/>", {addClass: "tfdclerk-hooks", style: "margin-left: 1em;"})
+        .append($("<span/>", {addClass: "mw-editsection-bracket", text: "["}))
         .append(this._build_hook("close", this.close))
+        .append(this._build_hook_divider())
         .append(this._build_hook("relist", this.relist))
+        .append($("<span/>", {addClass: "mw-editsection-bracket", text: "]"}))
         .appendTo(this.head.find(".mw-editsection"));
 };
