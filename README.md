@@ -1,3 +1,8 @@
+__Note:__ Unfortunately, this project has been effectively abandoned. There is
+enough progress here to be useful for interested parties in the future, but a
+lot of things will need to be reconsidered. TFD seems to be functioning fine
+anyway, but I do apologize for those I promised this script to.
+
 This is an English Wikipedia
 [user script](https://en.wikipedia.org/wiki/Wikipedia:User_scripts) to automate
 common

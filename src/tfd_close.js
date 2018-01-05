@@ -45,6 +45,7 @@ TFD.prototype._is_merge = function() {
 TFD.prototype._get_close_action_choices = function() {
     // TODO: disable action options until transcluion info loads...
     // TODO: restrictions for close result
+    // - ["delete", "keep", "redirect", "merge", "nomerge", "nocon", "other"];
     return [{
         id: "none",
         name: "Do nothing",
@@ -60,16 +61,16 @@ TFD.prototype._get_close_action_choices = function() {
         help: "The script will add {{being deleted}} to the template and " +
               "add an entry to the holding cell ([[WP:TFD/H]]).",
         on_select: null,  // TODO: auto-select "to merge" if merging
-        on_close: null,
-        restrict: {}
+        on_close: null,  // TODO
+        restrict: {results: ["delete", "redirect", "merge", "nocon", "other"]}
     }, {
         id: "keep",
         name: "Keep", // TODO: clarify? esp. for merges
-        help: "TODO",
-        // remove {{TFD}}/{{TFM}}, add/update {{TFD end}} on talk with result
+        help: "The script will remove {{tfd}} or {{tfm}} from the template " +
+              "and add {{Old TfD}} to its talk page.",
         on_select: null,
-        on_close: null,
-        restrict: {}
+        on_close: null,  // TODO
+        restrict: {results: ["keep", "merge", "nomerge", "nocon", "other"]} // SPLIT OFF "merge" FOR "merge target"?
     }, {
         id: "redirect",
         name: "Redirect", // TODO: clarify?
@@ -121,9 +122,10 @@ TFD.prototype._on_close_result_change = function() {
 
 TFD.prototype._build_close_results = function() {
     if (this._is_merge())
-        var choices = ["Merge", "Do not merge", "No consensus", "Other"];
+        var choices = [["Merge"], ["Do not merge", "nomerge"]];
     else
-        var choices = ["Delete", "Keep", "Redirect", "No consensus", "Other"];
+        var choices = [["Delete"], ["Keep"], ["Redirect"]];
+    choices.push(["No consensus", "nocon"], ["Other"]);
 
     var self = this;
     var elems = $("<div/>");
@@ -140,11 +142,11 @@ TFD.prototype._build_close_results = function() {
         $("<label/>").append($("<input/>", {
                 name: "result",
                 type: "radio",
-                value: choice.toLowerCase(),
+                value: choice[1] || choice[0].toLowerCase(),
                 change: function() { self._on_close_result_change(); }
             })).append($("<span/>", {
                 addClass: "tfdclerk-result-option",
-                text: choice
+                text: choice[0]
             })).appendTo(elems);
     });
 
